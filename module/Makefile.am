@@ -20,34 +20,34 @@
 ##   Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 wmdir = $(GUILE_SITE)
-nobase_wm_DATA =                     \
-guile-wm/color.scm                   \
-guile-wm/focus.scm                   \
-guile-wm/keystroke.scm               \
-guile-wm/reparent.scm                \
-guile-wm/text.scm                    \
-guile-wm/text-edit.scm               \
-guile-wm/command.scm                 \
-guile-wm/icccm.scm                   \
-guile-wm/keysyms.scm                 \
-guile-wm/shared.scm                  \
-guile-wm/user.scm                    \
-guile-wm/draw.scm                    \
-guile-wm/keymap.scm                  \
-guile-wm/log.scm                     \
-guile-wm/redirect.scm                \
-guile-wm/module/cursor.scm           \
-guile-wm/module/message.scm          \
-guile-wm/module/repl.scm             \
-guile-wm/module/simple-reparent.scm  \
-guile-wm/module/window-cycle.scm     \
-guile-wm/module/fullscreen.scm       \
-guile-wm/module/minibuffer.scm       \
-guile-wm/module/root-keymap.scm      \
-guile-wm/module/time.scm             \
-guile-wm/module/window-menu.scm      \
-guile-wm/module/menu.scm             \
-guile-wm/module/randr.scm            \
-guile-wm/module/simple-focus.scm     \
-guile-wm/module/tinywm.scm           \
+nobase_dist_wm_DATA =                     \
+guile-wm/color.scm                        \
+guile-wm/focus.scm                        \
+guile-wm/keystroke.scm                    \
+guile-wm/reparent.scm                     \
+guile-wm/text.scm                         \
+guile-wm/text-edit.scm                    \
+guile-wm/command.scm                      \
+guile-wm/icccm.scm                        \
+guile-wm/keysyms.scm                      \
+guile-wm/shared.scm                       \
+guile-wm/user.scm                         \
+guile-wm/draw.scm                         \
+guile-wm/keymap.scm                       \
+guile-wm/log.scm                          \
+guile-wm/redirect.scm                     \
+guile-wm/module/cursor.scm                \
+guile-wm/module/message.scm               \
+guile-wm/module/repl.scm                  \
+guile-wm/module/simple-reparent.scm       \
+guile-wm/module/window-cycle.scm          \
+guile-wm/module/fullscreen.scm            \
+guile-wm/module/minibuffer.scm            \
+guile-wm/module/root-keymap.scm           \
+guile-wm/module/time.scm                  \
+guile-wm/module/window-menu.scm           \
+guile-wm/module/menu.scm                  \
+guile-wm/module/randr.scm                 \
+guile-wm/module/simple-focus.scm          \
+guile-wm/module/tinywm.scm                \
 language/command/spec.scm
