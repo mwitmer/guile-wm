@@ -1,0 +1,91 @@
+#+TITLE: Guile-WM
+#+AUTHOR: Mark Witmer
+#+EMAIL: mark@markwitmer.com
+#+OPTIONS: email:t
+#+DESCRIPTION: A Window Manager Toolkit for Guile
+
+* Overview
+
+Guile-WM is a framework for creating an X window manager (or any other
+X application, really) and a set of useful modules designed for that
+purpose. Users are encouraged to pick and choose from ones presently
+available and contribute their own as well!
+
+Guile-WM relies /heavily/ on its user init file. In fact, it won't do
+anything on its own without one. The intention is to provide something
+100% configurable.
+
+* Why?
+
+Guile Scheme is just so much fun to work with, I wanted to build my
+house out of it. (Also, StumpWM won't work in my Linux distribution
+right now. And I find LOOP macros unsettling for some reason.)
+
+I didn't want to build a WM on top of xlib. It's obsolete, or should
+be, anyway. XCB is great, and when I saw that it comes with XML files
+that describe the X protocol so that you can easily implement an X
+client in a different language, I decided to build the whole X client
+stack in Scheme. Why not? So I made Guile XCB. And then, finally, I
+got to work on this.
+
+* What's Actually Implemented
+
+- keymaps/minibuffer/user-defined commands: The usual emacs-style
+  stuff.
+- tinywm-inspired window management: Though I do some reparenting
+  and highlight the focused window.
+- Built-in repl: make changes to the WM while it's running, talk to
+  the X server directly (if you're into that kind of thing), integrate
+  with Geiser in Emacs, etc. (Note: if you call a procedure that talks
+  to the X server, use the metacommand ,post to evalute the
+  expression.  That way it'll run inside the event loop on the other
+  thread).
+- "icccm" support: Ha ha, not really, but I have a few bits and pieces
+  implemented
+- And more! It's completely open, so you could implement whatever
+  window-management paradigm you like.
+
+* What's Not Implemented
+
+There's a lot more I'd like to do, but as you can see, it gets
+progressively more grandiose and, um... crazy, perhaps.
+
+** Wish List
+
+- Command-line options. Mainly to let you pick a different init file.
+- A more sophisticated tiling window manager algorithm
+- Some kind of window decoration
+- Built-in replacements for those little X utility programs (xmodmap,
+  xsetbg, etc.) I did part of xrandr as a proof-of-concept.
+- A status bar/modeline type thing
+- Antialiased fonts! guile-pango would be good for this.
+- Whatever else you want... ideas (and implementations) welcome.
+
+** Even Crazier Wish List
+
+- Implement enough of a widget toolkit to actually run Guile Emacs
+  inside of Guile-WM all on Guile XCB. You would basically be running
+  a Lisp-machine at that point and all of your friends will be
+  jealous.
+- Add support for XInput2 to Guile XCB w/touch gestures and whatnot
+  and build a hackable mobile device interface. Isn't it a tragedy
+  that smartphones are becoming the most common type of computer, but
+  you can't really hack on them? Real XCB doesn't support XInput2 yet,
+  but we don't have to wait for them...
+- Build a WM on top of Wayland. That would require a Scheme Wayland
+  client, which could be built along the lines of Guile XCB, since the
+  Wayland projects comes with the same kind of XML spec files that XCB
+  uses.
+
+* Sample
+
+An annotated sample init file is included with the distribution as
+"wm-init-sample.scm". It demonstrates how to set up the configurable
+values in the available modules. Copy it to ~/.guile-wm to try it out.
+
+* Installation and Prerequisites
+
+You can use the typical ./configure, make, make install chain to build
+Guile-WM.
+
+Guile-WM requires Guile XCB and the latest release of Guile (2.0.9).
