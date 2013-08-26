@@ -17,15 +17,17 @@
   #:use-module (ice-9 format)
   #:use-module (xcb event-loop))
 
-(define-public logfile (format #f "~a/guile-wm.log" (getenv "HOME")))
-(define port (open-file logfile "w0"))
-(current-output-port port)
-(current-error-port port)
-
 (define-public (log! message)
-  (let* ((tm (localtime (current-time))))
+  (let ((tm (localtime (current-time))))
     (format #t "~2,'0d:~2,'0d:~2,'0d  ~a\n"
             (tm:hour tm) (tm:min tm) (tm:sec tm) message)))
 
+(define port #f)
+
+(define-public (open-log logfile)
+  (set! port (open-file logfile "w0"))
+  (current-output-port port)
+  (current-error-port port))
+
 (define-public (close-log)
-  (close-port port))
+  (if port (close-port port)))

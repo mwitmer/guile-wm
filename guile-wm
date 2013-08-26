@@ -24,15 +24,14 @@
  (ice-9 format)
  (ice-9 regex)
  (ice-9 rdelim)
+ (ice-9 getopt-long)
  (xcb event-loop)
  (xcb xml)
  (xcb xml xproto)
  (system base compile))
 
-(define user-config-file (format #f "~a/.guile-wm" (getenv "HOME")))
-
 (define (report-error resume data)
-  (format (current-error-port) "X Error: ~a \n~{~a~}" 
+  (format (current-error-port) "X Error: ~a \n~{~a~}"
           (xcb-struct-name (xcb-struct data))
           (map (lambda (f) (format #f "~a: ~a\n" f (xref (xcb-data data) f)))
                (xcb-struct-fields (xcb-struct data))))
@@ -40,7 +39,7 @@
 
 (define wm-modules-spec (make-regexp "^;+\\s+wm-modules:\\s+(.+)"))
 
-(define (get-user-modules)
+(define (get-user-modules init-file)
   (define (read-module-names str)
     (define (read-names)
       (let read-name ((names '()) (raw-name (read)))
@@ -52,25 +51,60 @@
   (define (read-modules)
     (let get-imports ((to-import '()) (l (read-line)))
       (define (get-imports-from-match match)
-        (get-imports 
+        (get-imports
          (append (read-module-names (match:substring match 1)) to-import)
          (read-line)))
       (if (eof-object? (peek-char)) to-import
           (or (and=> (regexp-exec wm-modules-spec l) get-imports-from-match)
               (get-imports to-import (read-line))))))
-  (define module-list (with-input-from-file user-config-file read-modules))
+  (define module-list (with-input-from-file init-file read-modules))
   (cons 'use-modules module-list))
 
-(define (main . args)
+(define (begin-event-loop init-file log-file)
   (define xcb-conn (xcb-connect!))
   (event-loop-prepare! xcb-conn report-error)
   (loop-with-connection xcb-conn
+    (open-log log-file)
     (current-screen (xref (xcb-connection-setup xcb-conn) 'roots 0))
     (current-root (xref (current-screen) 'root))
     (let ((user-module (resolve-module '(guile-wm user))))
-     (set-current-module user-module)
-     (compile (get-user-modules) #:env user-module)
-     (compile `(begin
-                 (init-guile-wm-modules!)
-                 (include ,user-config-file)) 
-              #:env user-module))))
+      (set-current-module user-module)
+      (when init-file
+          (compile (get-user-modules init-file) #:env user-module)
+          (compile `(begin
+                      (init-guile-wm-modules!)
+                      (include ,init-file))
+                   #:env user-module))))
+  (close-log))
+
+(define (main . args)
+  (define option-spec
+    '((version   (single-char #\v) (value #f))
+      (init-file (single-char #\i) (value #t))
+      (log-file  (single-char #\l) (value #t))
+      (quick     (single-char #\q) (value #f))
+      (help      (single-char #\h) (value #f))))
+  (define options (getopt-long (command-line) option-spec))
+  (define help-wanted? (option-ref options 'help #f))
+  (define version-wanted? (option-ref options 'version #f))
+  (define quick-mode? (option-ref options 'quick #f))
+  (define log-file (option-ref
+                    options 'log-file
+                    (format #f "~a/guile-wm.log" (getenv "HOME"))))
+  (define init-file
+    (if quick-mode? #f
+        (option-ref
+         options 'init-file
+         (format #f "~a/.guile-wm" (getenv "HOME")))))
+  (if (or version-wanted? help-wanted?)
+      (begin
+        (if version-wanted? (display "Guile-WM version 0.1\n"))
+        (if help-wanted?
+            (display "\
+     guile-wm [options]
+       -v, --version    Display version
+       -i, --init-file  Use the given init file (default \"$HOME/.guile-wm\")
+       -l, --log-file   Use the given log file (defaults \"$HOME/guile-wm.log\")
+       -q, --quick      Run without any init file
+       -h, --help       Display this help\n")))
+      (begin-event-loop init-file log-file)))

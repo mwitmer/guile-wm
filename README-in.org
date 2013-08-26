@@ -52,7 +52,6 @@ progressively more grandiose and, um... crazy, perhaps.
 
 ** Wish List
 
-- Command-line options. Mainly to let you pick a different init file.
 - A more sophisticated tiling window manager algorithm
 - Some kind of window decoration
 - Built-in replacements for those little X utility programs (xmodmap,

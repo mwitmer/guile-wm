@@ -80,7 +80,6 @@ Table of Contents
 4.1 Wish List
 ─────────────
 
-  • Command-line options. Mainly to let you pick a different init file.
   • A more sophisticated tiling window manager algorithm
   • Some kind of window decoration
   • Built-in replacements for those little X utility programs (xmodmap,
