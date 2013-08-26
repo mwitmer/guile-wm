@@ -12,7 +12,7 @@ AC_CONFIG_FILES([
         module/Makefile
 ])
 
-GUILE_PKG([2.2])
+GUILE_PKG([2.0 2.2])
 GUILE_SITE_DIR
 GUILE_PROGS
 
