@@ -72,4 +72,5 @@
 (register-guile-wm-module!
  (lambda ()
    (set! target-win (current-root))
+   (set! (root-key) root-key-val)
    (get-next-key (keystroke-listen! target-win root-key-tag))))
