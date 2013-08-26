@@ -17,13 +17,16 @@
   #:use-module (xcb event-loop)
   #:use-module (xcb xml xproto)
   #:use-module (xcb xml)
-  #:use-module (guile-wm shared))
+  #:use-module (guile-wm shared)
+  #:use-module (guile-wm log))
 
 (define-public (set-focus new-focus)
   (with-replies ((input-focus get-input-focus))
     (define old-focus (xref input-focus 'focus))
     (focus-change old-focus new-focus)
     (set-input-focus 'pointer-root new-focus 0)
+    (if (not (xcb= old-focus new-focus))
+     (log! (format #f "Input focus: ~a" new-focus)))
     (configure-window (window-parent new-focus) #:stack-mode 'above)))
 
 (define-public (focus-change old new) #t)
