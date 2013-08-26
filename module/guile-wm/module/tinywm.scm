@@ -16,6 +16,7 @@
 (define-module (guile-wm module tinywm)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm log)
+  #:use-module (guile-wm focus)
   #:use-module (guile-wm module randr)
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop)
@@ -67,19 +68,18 @@
 
 (define (on-button-press button-press)
   (win (xref button-press 'child))
+  (set-focus (win))
   (if (not (= (xid->integer (win)) 0))
       (on-window-click (win) button-press)))
 
 (register-guile-wm-module!
  (lambda ()
-   (define root (current-root))
-   (define (guard event) (xid= (xref event 'event) (current-root)))
+   (create-listener ()
+     ((motion-notify-event #:event (current-root))  => on-motion-notify)
+     ((button-release-event #:event (current-root)) => on-button-release)
+     ((button-press-event #:event (current-root))   => on-button-press))
 
-   (listen! motion-notify-event root on-motion-notify guard)
-   (listen! button-release-event root on-button-release guard)
-   (listen! button-press-event root on-button-press guard)
-
-   (grab-button #f root '(button-press button-release) 'async 'async
-    root (xcb-none xcursor) '#{1}# '(#{1}#))
-   (grab-button #f root '(button-press button-release) 'async 'async
-               root (xcb-none xcursor) '#{3}# '(#{1}#))))
+   (grab-button #f (current-root) '(button-press button-release) 'async 'async
+                (current-root) (xcb-none xcursor) '#{1}# '(#{1}#))
+   (grab-button #f (current-root) '(button-press button-release) 'async 'async
+                (current-root) (xcb-none xcursor) '#{3}# '(#{1}#))))
