@@ -34,13 +34,13 @@
     (change-window-attributes parent
       #:event-mask '(button-press substructure-redirect substructure-notify
                                   structure-notify visibility-change))
-    (reparent-window child parent 0 0)
+    (reparent-window child parent x y)
     (map-window child)
     (map-window parent)
-    (set-focus child)
     (create-listener (stop!)
       ((destroy-notify-event destroy #:window child)
        (hashv-remove! reparents (xid->integer child))
+       (hashv-remove! obscured-windows (xid->integer child))
        (destroy-window parent)
        (stop!))
       ((visibility-notify-event visibility #:window parent)

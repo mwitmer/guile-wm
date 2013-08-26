@@ -33,7 +33,8 @@
       (map-window stored-parent)
       (let ((new-parent (basic-window-create 0 0 1 1 2 '())))
         (grab new-parent)
-        (wm-reparent-window child new-parent 0 0))))
+        (wm-reparent-window child new-parent 0 0)
+        (set-focus child))))
 
 (define (on-configure configure-request) 
   (define value-mask (xref configure-request 'value-mask))
