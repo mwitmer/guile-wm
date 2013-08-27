@@ -17,7 +17,8 @@
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (guile-wm log)
-  #:export (use-wm-modules))
+  #:export (use-wm-modules)
+  #:replace (with-input-from-string))
 
 (define-public current-root (make-parameter #f))
 (define-public current-screen (make-parameter #f))
@@ -31,7 +32,7 @@
 (define-public (init-guile-wm-modules!)
   (for-each 
    (lambda (kv)
-     (log! (format #f "Initializing module: ~a ~a" (car kv) (cdr kv)))
+     (log! (format #f "Initializing module: ~a" (module-name (car kv))))
      ((cdr kv))) 
    (hash-map->list cons module-init-thunks)))
 
@@ -39,6 +40,10 @@
 (define-public (get-command key) (hashq-ref commands key))
 
 (define-public reparents (make-hash-table))
+
+(define (with-input-from-string string thunk)
+  (parameterize ((current-input-port (open-input-string string)))
+    (thunk)))
 
 (define-public (reverse-reparents)
   (hash-map->list 
