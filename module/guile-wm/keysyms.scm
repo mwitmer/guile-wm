@@ -24,7 +24,10 @@
 (define (populate-hash! hsh alist)
   (for-each
    (lambda (keysym-name)
-     (hashv-set! hsh (car keysym-name) (cdr keysym-name)))
+     (define k (car keysym-name))
+     (if (number? k)
+         (hashv-set! hsh k (cdr keysym-name))
+         (hashq-set! hsh k (cdr keysym-name))))
    alist))
 
 (define-public (sym->printable sym)

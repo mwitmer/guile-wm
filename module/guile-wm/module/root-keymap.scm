@@ -21,6 +21,7 @@
   #:use-module (guile-wm keysyms)
   #:use-module (guile-wm keystroke)
   #:use-module (guile-wm log)
+  #:use-module (guile-wm command)
   #:use-module (guile-wm focus)
   #:use-module (guile-wm draw)
   #:use-module (guile-wm shared)
@@ -28,7 +29,7 @@
   #:use-module (srfi srfi-11)
   #:export (root-keymap keymap-cursor))
 
-(define root-key-val 'C-t)
+(define-once root-key-val 'C-t)
 (define (root-key-ref) root-key-val)
 (define (root-key-set! k)
   (define keysyms (make-keysym-table))
@@ -53,9 +54,9 @@
 
 (define-keymap-once root-keymap ())
 (define root-key-tag (make-tag 'root))
-(define target-win #f)
+(define-once target-win #f)
 
-(define-public keymap-cursor-val #f)
+(define-once keymap-cursor-val #f)
 
 (define (get-next-key get)
   (define (process-root-key key)
@@ -64,7 +65,10 @@
       (get-next-key get)))
   (get process-root-key))
 
-(define keymap-cursor
+(define-command (set-root-key! (key #:symbol))
+  (set! (root-key) key))
+
+(define-public keymap-cursor
   (make-procedure-with-setter
    (lambda () keymap-cursor-val)
    (lambda (sym) (set! keymap-cursor-val (make-cursor sym)))))
