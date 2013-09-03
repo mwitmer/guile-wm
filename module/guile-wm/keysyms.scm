@@ -38,7 +38,7 @@
         ((space) " ")((bang) "!")((double-quote) "\"")((hash) "#")((dollar) "$")
         ((percent) "%")((ampersand) "&")((single-quote) "'")((left-paren) "(")
         ((right-paren) ")")((asterisk) "*")((plus) "+")((comma) ",")((dash) "-")
-        ((period) ".")((slash) "-")((zero) "0")((one) "1")((two) "2")
+        ((period) ".")((slash) "/")((zero) "0")((one) "1")((two) "2")
         ((three) "3")((four) "4")((five) "5")((six) "6")((seven) "7")
         ((eight) "8")((nine) "9")((colon) ":")((semicolon) ";")
         ((greater-than) ">")((equal) "=")((less-than) "<")((question) "?")
