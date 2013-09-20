@@ -24,7 +24,8 @@
   #:use-module (xcb xml ext randr)
   #:use-module (guile-wm command)
   #:use-module (guile-wm shared)
-  #:use-module (guile-wm log))
+  #:use-module (guile-wm log)
+  #:export (screen-info))
 
 ;; Handling modes
 

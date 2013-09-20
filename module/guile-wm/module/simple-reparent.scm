@@ -28,13 +28,11 @@
   (define xcb-conn (current-xcb-connection))
   (define original-parent (xref map-request 'parent))
   (define child (xref map-request 'window))
-  (define stored-parent (hashv-ref reparents (xid->integer child)))
-  (if stored-parent
-      (map-window stored-parent)
-      (let ((new-parent (basic-window-create 0 0 1 1 2 '())))
-        (grab new-parent)
-        (wm-reparent-window child new-parent 0 0)
-        (set-focus child))))
+  (when (not (hashv-ref reparents (xid->integer child)))
+    (let ((new-parent (basic-window-create 0 0 1 1 2 '())))
+      (grab new-parent)
+      (wm-reparent-window child new-parent 0 0)
+      (set-focus child))))
 
 (define (on-configure configure-request) 
   (define value-mask (xref configure-request 'value-mask))
