@@ -45,9 +45,8 @@
       ((unmap-notify-event unmap-notify #:window child)
        (hashv-remove! reparents (xid->integer child))
        (reparent-window child (current-root) 0 0)
-       (format #t "Unmap child: ~a parent: ~a\n" child parent)
-       (stop!)
-       (destroy-window parent))
+       (destroy-window parent)
+       (stop!))
       ((configure-notify-event configure #:window parent)
        (configure-window child
          #:height (max (- (xref configure 'height) y) 0)
