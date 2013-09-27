@@ -68,7 +68,7 @@
 
 (define (on-button-press button-press)
   (win (xref button-press 'child))
-  (set-focus (win))
+  (set-focus (assv-ref (reverse-reparents) (xid->integer (win))))
   (if (not (= (xid->integer (win)) 0))
       (on-window-click (win) button-press)))
 
