@@ -68,8 +68,10 @@
 
 (define (on-button-press button-press)
   (win (xref button-press 'child))
-  (set-focus (assv-ref (reverse-reparents) (xid->integer (win))))
-  (if (not (= (xid->integer (win)) 0))
+
+  ;; Don't try to move/resize the root window.
+  (unless (= (xid->integer (win)) 0)
+      (set-focus (assv-ref (reverse-reparents) (xid->integer (win))))
       (on-window-click (win) button-press)))
 
 (register-guile-wm-module!
