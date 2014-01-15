@@ -99,7 +99,7 @@ Table of Contents
   • Add support for XInput2 to Guile XCB w/touch gestures and whatnot
     and build a hackable mobile device interface. Isn't it a tragedy
     that smartphones are becoming the most common type of computer, but
-    you can't really hack on them? Real XCB has support XInput2 now, so
+    you can't really hack on them? Real XCB does support XInput2 now, so
     I'm running out of excuses…
   • Build a WM on top of Wayland. That would require a Scheme Wayland
     client, which could be built along the lines of Guile XCB, since the
