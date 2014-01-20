@@ -65,9 +65,7 @@ the cdr is the xid of the child."
    reparents))
 
 (define-public (reparented-windows)
-  "Return a association list for all reparented windows. The car of
-each assoc is the integer value of the xid of the child window, and
-the cdr is the xid of the parent."
+  "Return a list of all reparented windows."
   (if reparents
       (hash-map->list (lambda (k v) (make-xid k xwindow)) reparents)
       #f))
