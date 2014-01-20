@@ -26,12 +26,20 @@
 
 (define font-string "fixed")
 
+(define hide-message-thread (make-parameter #f))
+
 (define-command (message msg #:string)
   (define screen (current-screen))
   (map-window message-window)
   (put-text (string-join msg) message-window 'white 'black font-string)
   (configure-window message-window #:stack-mode 'above)
-  (make-thread (lambda () (sleep 8) (unmap-window message-window))))
+  (if (hide-message-thread) (cancel-thread (hide-message-thread)))
+  (hide-message-thread
+   (make-thread
+    (lambda ()
+      (sleep 8)
+      (unmap-window message-window)
+      (hide-message-thread #f)))))
 
 (define message-active? (make-parameter #f))
 (define-once message-window #f)
