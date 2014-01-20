@@ -15,10 +15,13 @@
 
 (define-module (guile-wm draw)
   #:use-module (xcb xml xproto)
+  #:use-module (xcb event-loop)
   #:use-module (xcb xml)
   #:use-module (guile-wm color)
+  #:use-module (guile-wm focus)
   #:use-module (guile-wm shared)
-  #:export (with-gc with-font with-pixmap basic-window-create))
+  #:export (with-gc with-font with-pixmap basic-window-create
+                    fixed-window-create))
 
 (define-syntax-rule (with-gc (gc drawable prop ...) stmt stmt* ...)
   (let* ((gc (make-new-xid xgcontext)))
@@ -51,6 +54,9 @@
 
 (define* (basic-window-create x y width height border
                               #:optional (events basic-events))
+  "Create a window with dimensions (X, Y), size (WIDTH, HEIGHT) and
+border width BORDER. Takes an optional event mask, which by default
+consists of key-press, structure-notify, and exposure."
   (define window (make-new-xid xwindow))
   (create-window
    24 window (current-root) x y width height border 'copy-from-parent 0
@@ -58,3 +64,18 @@
    #:bit-gravity 'north-west #:event-mask events #:override-redirect #t)
   window)
 
+(define* (fixed-window-create x y width height border
+                              #:optional (events basic-events))
+  "Create a window that will retain focus and always remain on top as
+long as it is mapped. Takes the same arguments as `basic-window-create'."
+  (define window
+    (basic-window-create
+     x y width height border
+     (if (memq 'visibility-change events) events
+         (cons 'visibility-change events))))
+  (create-listener (stop!)
+    ((visibility-notify-event visibility #:window window)
+     (when (not (eq? (xref visibility 'state) 'unobscured))
+       (configure-window (xref visibility 'window) #:stack-mode 'above)
+       (set-focus (xref visibility 'window)))))
+  window)
