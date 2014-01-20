@@ -74,12 +74,18 @@ the window will also keep the focus."
   (define window
     (basic-window-create
      x y width height border
-     (if (memq 'visibility-change events) events
-         (cons 'visibility-change events))))
+     (cons 'visibility-change events)))
+  (define previous-window #f)
   (create-listener (stop!)
+    ((map-notify-event map-notify #:window window)
+     (set! previous-window (xref (reply-for get-input-focus) 'focus))
+     (if focused? (set-focus (xref map-notify 'window))))
+    ((unmap-notify-event unmap-notify #:window window)
+     (if (and previous-window (memv (xid->integer previous-window)
+                                    (map xid->integer (reparented-windows))))
+         (set-focus previous-window)))
     ((visibility-notify-event visibility #:window window)
      (when (not (eq? (xref visibility 'state) 'unobscured))
        (configure-window (xref visibility 'window) #:stack-mode 'above)
        (if focused? (set-focus (xref visibility 'window))))))
   window)
-
