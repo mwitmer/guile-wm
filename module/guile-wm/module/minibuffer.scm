@@ -22,6 +22,7 @@
   #:use-module (guile-wm keysyms)
   #:use-module (guile-wm command)
   #:use-module (guile-wm module message)
+  #:use-module (guile-wm module root-keymap)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm text-edit)
   #:use-module (guile-wm focus)
@@ -81,7 +82,8 @@
     (case (data-state data)
       ((read) (loop data))
       (else => (finish data))))
-  (loop (make-text-edit-data 'read (cons 0 0) (vlist-cons "" vlist-null))))
+  (with-root-keymap-disabled
+   (loop (make-text-edit-data 'read (cons 0 0) (vlist-cons "" vlist-null)))))
 
 (define (prepare-text unescaped-lines point)
   (define row (cdr point))
@@ -145,4 +147,4 @@
 (define minibuffer-key-tag (make-tag 'minibuffer))
 
 (register-guile-wm-module!
- (lambda () (set! minibuffer-window (basic-window-create 0 0 200 20 0))))
+ (lambda () (set! minibuffer-window (fixed-window-create 0 0 200 20 0))))

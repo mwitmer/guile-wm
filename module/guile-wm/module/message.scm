@@ -22,7 +22,7 @@
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop)
-  #:export ((font-string . message-font)))
+  #:export ((font-string . message-font) message-window))
 
 (define font-string "fixed")
 
@@ -38,4 +38,4 @@
 (define message-key-tag (make-tag 'message))
 
 (register-guile-wm-module!
- (lambda () (set! message-window (basic-window-create 0 0 200 20 0))))
+ (lambda () (set! message-window (fixed-window-create 0 0 200 20 0))))

@@ -18,6 +18,7 @@
   #:use-module (guile-wm log)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm keystroke)
+  #:use-module (guile-wm module root-keymap)
   #:use-module (guile-wm text)
   #:use-module (guile-wm command)
   #:use-module (guile-wm draw)
@@ -71,7 +72,8 @@
         (case state
           ((select) (loop state row-count row))
           (else => (finish row))))))
-  (loop 'select (vlist-length choice-vlist) 0))
+  (with-root-keymap-disabled
+   (loop 'select (vlist-length choice-vlist) 0)))
 
 (define (prepare-text lines row)
   (define with-highlight
@@ -95,4 +97,4 @@
   (if (not (menu-active?)) (parameterize ((menu-active? #t)) (run-menu))))
 
 (register-guile-wm-module!
- (lambda () (set! menu-window (basic-window-create 0 0 200 20 0))))
+ (lambda () (set! menu-window (fixed-window-create 0 0 200 20 0))))

@@ -22,12 +22,12 @@
   #:use-module (guile-wm keystroke)
   #:use-module (guile-wm log)
   #:use-module (guile-wm command)
-  #:use-module (guile-wm focus)
   #:use-module (guile-wm draw)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm module cursor)
+  #:use-module (guile-wm module message)
   #:use-module (srfi srfi-11)
-  #:export (root-keymap keymap-cursor))
+  #:export (root-keymap keymap-cursor with-root-keymap-disabled))
 
 (define-once root-key-val 'C-t)
 (define (root-key-ref) root-key-val)
@@ -43,26 +43,43 @@
 
 (define (run-keymap get)
   (define keymap
-    (keymap-attach root-keymap (const (const #f)) keymap-void identity))
+    (keymap-attach root-keymap (lambda (d) (message "Unknown key")) keymap-void identity))
   (grab-pointer #t target-win '() 'async 'async (xcb-none xwindow) 
                 (or keymap-cursor-val (xcb-none xcursor)) 0)
-  (grab-keyboard #t target-win 0 'async 'async)
+  (grab-keyboard #f target-win 0 'async 'async)
   (let ((action (keymap-lookup keymap get)))
     (ungrab-pointer 0)
     (ungrab-keyboard 0)
-    (action)))
+    (unmap-window message-window)
+    action))
 
 (define-keymap-once root-keymap ())
 (define root-key-tag (make-tag 'root))
 (define-once target-win #f)
 
 (define-once keymap-cursor-val #f)
+(define root-keymap-enabled? (make-parameter #t))
+
+(define-syntax with-root-keymap-disabled
+  (syntax-rules ()
+    "Evaluate statements STMT ... and return the value of the last one
+with the root keymap disabled. Use this macro to disable the root
+keymap while minibuffers, menus, and so on are active."
+    ((_ stmt ...)
+     (begin
+       (root-keymap-enabled? #f)
+       (let ((result ((lambda () stmt ...))))
+         (root-keymap-enabled? #t)
+         result)))))
 
 (define (get-next-key get)
   (define (process-root-key key)
     (when (eq? key (root-key))
-      (run-keymap get)
-      (get-next-key get)))
+      (if (root-keymap-enabled?)
+          (let ((action (run-keymap get)))
+            (get-next-key get)
+            (action))
+          (get-next-key get))))
   (get process-root-key))
 
 (define-command (set-root-key! (key #:symbol))
