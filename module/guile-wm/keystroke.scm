@@ -26,6 +26,10 @@
                  right-shift left-super right-super menu))
 
 (define-public (keystroke-listen! win tag)
+  "Returns a procedure that will solicit a keypress with WIN focused
+and return the associated key symbol. The returned procedure takes the
+same arguments as `solicit'. TAG is a unique name for the listener, as
+described in `create-tagged-listener'."
   (receive (stop! reset!)
    (create-tagged-listener tag
        (stop! reset!
