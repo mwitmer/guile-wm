@@ -22,27 +22,14 @@
             set-data-state
             data-text
             data-point
-            data-state
-            make-text-edit-data))
+            data-state))
 
-(define-record-type text-edit-data
+(define-immutable-record-type text-edit-data
   (make-text-edit-data state point text)
   minibuffer-data?
-  (state data-state set-data-state!)
-  (point data-point set-data-point!)
-  (text data-text set-data-text!))
-
-(define (set-data-state data state)
-  (set-data-state! data state)
-  data)
-
-(define (set-data-point data point)
-  (set-data-point! data point)
-  data)
-
-(define (set-data-text data text)
-  (set-data-text! data text)
-  data)
+  (state data-state set-data-state)
+  (point data-point set-data-point)
+  (text data-text set-data-text))
 
 (define (constrain start end n)
   (cond ((< n start) start)
