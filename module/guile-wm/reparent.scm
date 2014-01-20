@@ -18,10 +18,13 @@
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop)
   #:use-module (guile-wm shared)
-  #:use-module (guile-wm focus)
   #:use-module (guile-wm redirect))
 
 (define-public (wm-reparent-window child parent x y)
+  "Reparent window CHILD inside of window PARENT with offset
+coordinates (X, Y), and set up event handlers for size, visibility,
+and mapping state changes. The parent window will be destroyed when
+the child window is unmapped."
   (hashv-set! reparents (xid->integer child) parent)
   (with-replies ((geom get-geometry child)
                  (parent-geom get-geometry parent))

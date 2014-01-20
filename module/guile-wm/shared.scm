@@ -27,9 +27,14 @@
 (define-public obscured-windows (make-hash-table))
 
 (define-public (register-guile-wm-module! thunk)
+  "Register the current module so that it can be initialized once the
+window manager is running. THUNK will be executed after
+`current-xcb-connection' is set to the window manager's X connection."
   (hashq-set! module-init-thunks (current-module) thunk))
 
 (define-public (init-guile-wm-modules!)
+  "Call all of the initialization thunks for registered window manager
+modules."
   (for-each 
    (lambda (kv)
      (log! (format #f "Initializing module: ~a" (module-name (car kv))))
@@ -37,20 +42,32 @@
    (hash-map->list cons module-init-thunks)))
 
 (define-public commands (make-hash-table))
-(define-public (get-command key) (hashq-ref commands key))
+(define-public (get-command key)
+  "Retrieve a window manager command with key KEY. Returns #f is
+none exists."
+  (hashq-ref commands key))
 
 (define-public reparents (make-hash-table))
+
+;; This procedure is redefined so that we can rewind delimited
+;; continuations through it
 
 (define (with-input-from-string string thunk)
   (parameterize ((current-input-port (open-input-string string)))
     (thunk)))
 
 (define-public (reverse-reparents)
+  "Return a association list for all reparented windows. The car of
+each assoc is the integer value of the xid of the parent window, and
+the cdr is the xid of the child."
   (hash-map->list 
    (lambda (k v) (cons (xid->integer v) (make-xid k xwindow))) 
    reparents))
 
 (define-public (reparented-windows)
+  "Return a association list for all reparented windows. The car of
+each assoc is the integer value of the xid of the child window, and
+the cdr is the xid of the parent."
   (if reparents
       (hash-map->list (lambda (k v) (make-xid k xwindow)) reparents)
       #f))
