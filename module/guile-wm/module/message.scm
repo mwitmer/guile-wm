@@ -38,4 +38,4 @@
 (define message-key-tag (make-tag 'message))
 
 (register-guile-wm-module!
- (lambda () (set! message-window (fixed-window-create 0 0 200 20 0))))
+ (lambda () (set! message-window (fixed-window-create 0 0 200 20 0 #:focused? #f))))

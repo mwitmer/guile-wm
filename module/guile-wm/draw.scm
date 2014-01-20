@@ -65,9 +65,12 @@ consists of key-press, structure-notify, and exposure."
   window)
 
 (define* (fixed-window-create x y width height border
-                              #:optional (events basic-events))
-  "Create a window that will retain focus and always remain on top as
-long as it is mapped. Takes the same arguments as `basic-window-create'."
+                              #:optional (events basic-events)
+                              #:key (focused? #t))
+  "Create a window that will always remain on top as long as it is
+mapped. Takes the same arguments as `basic-window-create', with the
+addition of keyword FOCUSED?, which defaults to true. When it is true,
+the window will also keep the focus."
   (define window
     (basic-window-create
      x y width height border
@@ -77,5 +80,6 @@ long as it is mapped. Takes the same arguments as `basic-window-create'."
     ((visibility-notify-event visibility #:window window)
      (when (not (eq? (xref visibility 'state) 'unobscured))
        (configure-window (xref visibility 'window) #:stack-mode 'above)
-       (set-focus (xref visibility 'window)))))
+       (if focused? (set-focus (xref visibility 'window))))))
   window)
+
