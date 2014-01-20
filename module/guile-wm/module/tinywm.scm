@@ -28,7 +28,6 @@
 (define screen-width (make-parameter #f))
 
 (define (on-motion-notify motion-notify)
-  (define xcb-conn (current-xcb-connection))
   (with-replies ((point query-pointer (current-root)) (geom get-geometry (win)))
     (define (box p g s) (if (> (+ p g) s) (- s g) p))
     (if (eq? (action) 'move)
@@ -71,8 +70,9 @@
 
   ;; Don't try to move/resize the root window.
   (unless (= (xid->integer (win)) 0)
+    (when (assv-ref (reverse-reparents) (xid->integer (win)))
       (set-focus (assv-ref (reverse-reparents) (xid->integer (win))))
-      (on-window-click (win) button-press)))
+      (on-window-click (win) button-press))))
 
 (register-guile-wm-module!
  (lambda ()
