@@ -79,7 +79,8 @@ keymap while minibuffers, menus, and so on are active."
           (let ((action (run-keymap get)))
             (get-next-key get)
             (action))
-          (get-next-key get))))
+          (get-next-key get))
+      (get-next-key get)))
   (get process-root-key))
 
 (define-command (set-root-key! (key #:symbol))
