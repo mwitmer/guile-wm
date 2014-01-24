@@ -17,7 +17,7 @@
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (guile-wm log)
-  #:export (use-wm-modules once)
+  #:export (use-wm-modules)
   #:replace (with-input-from-string))
 
 (define-public current-root (make-parameter #f))
