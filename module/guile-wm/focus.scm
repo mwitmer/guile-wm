@@ -25,9 +25,9 @@
 (define-public (set-focus new-focus)
   (with-replies ((input-focus get-input-focus))
     (define old-focus (xref input-focus 'focus))
-    (focus-change old-focus new-focus)
+    (run-wm-hook focus-change old-focus new-focus)
     (set-input-focus 'pointer-root new-focus 0)
     (set! current-focus new-focus)
     (configure-window (window-parent new-focus) #:stack-mode 'above)))
 
-(define-public (focus-change old new) #t)
+(define-public focus-change (make-wm-hook 2))

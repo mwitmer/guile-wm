@@ -20,8 +20,7 @@
   #:use-module (guile-wm shared)
   #:use-module (guile-wm color)
   #:use-module (guile-wm focus)
-  #:use-module (guile-wm reparent)
-  #:re-export (focus-change))
+  #:use-module (guile-wm reparent))
 
 (define simple-focus-color-val 'white)
 (define simple-unfocus-color-val 'black)
@@ -37,7 +36,7 @@
      (with-replies ((input-focus get-input-focus))
        (define old-focus (xref input-focus 'focus))
        (if (is-window? old-focus)
-        (focus-change old-focus old-focus))))))
+        (run-wm-hook focus-change old-focus old-focus))))))
 
 (define-public simple-unfocus-color
   (make-procedure-with-setter
@@ -58,4 +57,6 @@
     #:border-pixel (pixel-for-color cmap simple-focus-color-val))
   (set! current-focus new))
 
-(register-guile-wm-module! (lambda () (set! focus-change simple-focus-change)))
+(register-guile-wm-module!
+ (lambda ()
+   (add-wm-hook! focus-change simple-focus-change)))
