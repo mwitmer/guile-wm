@@ -25,7 +25,7 @@
   #:use-module (guile-wm command)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm log)
-  #:export (screen-info))
+  #:export (screen-info screen-change-hook))
 
 ;; Handling modes
 
@@ -315,10 +315,7 @@ to SetCrtcConfig"))
 (define-once output-infos (make-parameter #f))
 (define-once mode-infos (make-parameter #f))
 (define-once screen-info (make-parameter #f))
-(define-once randr-observers (make-hash-table))
-
-(define-public (register-randr-observer! key proc)
-  (hashq-set! randr-observers key proc))
+(define-once screen-change-hook (make-wm-hook))
 
 (define (setup-randr change)
   (screen-resources (reply-for get-screen-resources-current (current-root)))
@@ -328,8 +325,7 @@ to SetCrtcConfig"))
     (output-infos (get-infos get-output-info outputs))
     (crtc-infos (get-infos get-crtc-info crtcs))
     (mode-infos (get-mode-infos))
-    (if change
-        (hash-for-each (lambda (k v) (v)) randr-observers))))
+    (run-wm-hook screen-change-hook)))
 
 (register-guile-wm-module!
  (lambda ()
