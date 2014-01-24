@@ -23,6 +23,7 @@
 
 (define modifier-keys
   '(left-control right-control left-shift
+                 left-meta right-meta
                  right-shift left-super right-super menu))
 
 (define-public (keystroke-listen! win tag)
