@@ -25,13 +25,17 @@
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop))
 
+(define-public menu-select-window-hook (make-wm-hook 1))
+
 (define-command (select-window)
   (define windows (or (reparented-windows) (top-level-windows)))
   (define choices (map cons (window-names windows) windows))
   (define (focus-window win)
-    (configure-window (window-parent win) #:stack-mode 'above)
-    (set-focus win))
+    (cond
+     ((wm-hook-empty? menu-select-window-hook)
+      (configure-window (window-parent win) #:stack-mode 'above)
+      (set-focus win))
+     (else (run-wm-hook menu-select-window-hook win))))
   (define focused-window (xref (reply-for get-input-focus) 'focus))
   (if (not (null? choices))
    (menu "Select a window:" choices focus-window focused-window)))
-
