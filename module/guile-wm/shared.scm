@@ -17,7 +17,7 @@
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (guile-wm log)
-  #:export (use-wm-modules)
+  #:export (use-wm-modules once)
   #:replace (with-input-from-string))
 
 (define-public current-root (make-parameter #f))
@@ -35,10 +35,10 @@ window manager is running. THUNK will be executed after
 (define-public (init-guile-wm-modules!)
   "Call all of the initialization thunks for registered window manager
 modules."
-  (for-each 
+  (for-each
    (lambda (kv)
      (log! (format #f "Initializing module: ~a" (module-name (car kv))))
-     ((cdr kv))) 
+     ((cdr kv)))
    (hash-map->list cons module-init-thunks)))
 
 (define-public commands (make-hash-table))
@@ -60,8 +60,8 @@ none exists."
   "Return a association list for all reparented windows. The car of
 each assoc is the integer value of the xid of the parent window, and
 the cdr is the xid of the child."
-  (hash-map->list 
-   (lambda (k v) (cons (xid->integer v) (make-xid k xwindow))) 
+  (hash-map->list
+   (lambda (k v) (cons (xid->integer v) (make-xid k xwindow)))
    reparents))
 
 (define-public (reparented-windows)
@@ -70,5 +70,18 @@ the cdr is the xid of the child."
       (hash-map->list (lambda (k v) (make-xid k xwindow)) reparents)
       #f))
 
+(define-public (window-child win)
+  (or (assv-ref (reverse-reparents)
+                (xid->integer win))
+      win))
+
 (define-public (window-parent win)
   (or (hashv-ref reparents (xid->integer win)) win))
+
+(define-public (reparented? win)
+  (let lp ((reparented (reparented-windows)))
+    (cond
+     ((null? reparented) #f)
+     ((xid= (car reparented) win) #t)
+     (else (lp (cdr reparented))))))
+

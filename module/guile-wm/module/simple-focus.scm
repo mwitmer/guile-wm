@@ -44,12 +44,18 @@
    (lambda () simple-unfocus-color-val)
    (lambda (new-color) (set! simple-unfocus-color-val new-color))))
 
+(define-public (unfocus-window! win)
+  (define cmap (xref (current-screen) 'default-colormap))
+  (change-window-attributes (window-parent win)
+    #:border-pixel (pixel-for-color cmap simple-unfocus-color-val)))
+
 (define-public (simple-focus-change old new)
   (define cmap (xref (current-screen) 'default-colormap))
-  (if (is-window? old)
-      (change-window-attributes (window-parent old)
-        #:border-pixel (pixel-for-color cmap simple-unfocus-color-val)))
+  (if (and old (reparented? old)) (unfocus-window! old))
+  (if (and current-focus (is-window? current-focus))
+      (unfocus-window! current-focus))
   (change-window-attributes (window-parent new)
-    #:border-pixel (pixel-for-color cmap simple-focus-color-val)))
+    #:border-pixel (pixel-for-color cmap simple-focus-color-val))
+  (set! current-focus new))
 
 (register-guile-wm-module! (lambda () (set! focus-change simple-focus-change)))

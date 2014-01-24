@@ -17,6 +17,7 @@
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop)
+  #:use-module (guile-wm focus)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm redirect))
 
@@ -47,7 +48,8 @@ the child window is unmapped."
            (hashv-remove! obscured-windows (xid->integer child))))
       ((unmap-notify-event unmap-notify #:window child)
        (hashv-remove! reparents (xid->integer child))
-       (reparent-window child (current-root) 0 0)
+       (if (and current-focus (xid= child current-focus))
+           (set! current-focus #f))
        (destroy-window parent)
        (stop!))
       ((configure-notify-event configure #:window parent)
