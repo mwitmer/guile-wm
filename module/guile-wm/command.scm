@@ -65,7 +65,7 @@
                     #:to 'value
                     #:env (current-module)))))
     (lambda args
-      (log! (format #f "Error in command: ~a ~a" command args)))
+      (log! (format #f "Error in command: ~a ~a" cmd args)))
     (lambda args
       (backtrace))))
 
@@ -78,9 +78,15 @@
   (close-port (open-pipe (string-join commands) OPEN_READ)))
 
 (define-command (wm-eval (arg #:string)) 
-  (with-input-from-string arg
-    (lambda () (read-and-compile
-                (current-input-port)
-                #:from scheme
-                #:to 'value
-                #:env (current-module)))))
+  (catch #t
+    (lambda ()
+      (with-input-from-string arg
+        (lambda () (read-and-compile
+                    (current-input-port)
+                    #:from scheme
+                    #:to 'value
+                    #:env (current-module)))))
+    (lambda args
+      (log! (format #f "Error in evaluated expression: ~a ~a" arg args)))
+    (lambda args
+      (backtrace))))
