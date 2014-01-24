@@ -1,5 +1,6 @@
 >(define-module (guile-wm module tiling)
   #:use-module (guile-wm module randr)
+  #:use-module (guile-wm module window-menu)
   #:use-module (guile-wm reparent)
   #:use-module (guile-wm command)
   #:use-module (guile-wm icccm)
@@ -430,6 +431,9 @@
          (set-tile-container! win frame)
          frame))))
 
+(if (module-defined? (current-module) 'reset-frames)
+    (remove-wm-hook! screen-change-hook reset-frames))
+
 ;; This gets called after the display configuration changes. The
 ;; contents of an old frame will get moved to the first new frame that
 ;; meets the following criteria:
@@ -466,7 +470,17 @@
     (fold find-matching-frame new-frames frame-list)
     (set! frame-list new-frames)))
 
-(register-randr-observer! (current-module) reset-frames)
+(add-wm-hook! screen-change-hook reset-frames)
+
+(if (module-defined? (current-module) 'tiling-menu-select-window)
+    (remove-wm-hook! screen-change-hook tiling-menu-select-window))
+
+(define (tiling-menu-select-window win)
+  (move-x-window! (window-parent win) selected-tile)
+  (discard-hidden-x-window! (window-parent win))
+  (select-tile selected-tile))
+
+(add-wm-hook! menu-select-window-hook tiling-menu-select-window)
 
 ;; Command API. It uses "window" instead of tile because people care
 ;; about their X windows, not the tile abstraction used internally
