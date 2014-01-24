@@ -14,8 +14,11 @@
 ;;    along with Guile-WM.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (guile-wm icccm)
+  #:use-module (ice-9 binary-ports)
   #:use-module (xcb xml)
   #:use-module (xcb event-loop)
+  #:use-module (xcb xml struct)
+  #:use-module (xcb xml type)
   #:use-module (xcb xml xproto)
   #:use-module (guile-wm shared))
 
@@ -60,3 +63,36 @@
          (not (xref (cdr attr-pair) 'override-redirect))))
   (map car (filter is-top-level? attribute-alist)))
 
+(define-xcb-struct wm-size-hints
+  (make-wm-size-hints
+   flags min-width min-height max-width max-height
+   width-inc height-inc min-aspect-numerator
+   min-aspect-denominator max-aspect-numerator
+   max-aspect-denominator base-width base-height
+   win-gravity)
+  wm-size-hints? wm-size-hints-type #f 72
+  (flags CARD32)
+  (*pad* 16)
+  (min-width INT32)
+  (min-height INT32)
+  (max-width INT32)
+  (max-height INT32)
+  (width-inc INT32)
+  (height-inc INT32)
+  (min-aspect-numerator INT32)
+  (min-aspect-denominator INT32)
+  (max-aspect-numerator INT32)
+  (max-aspect-denominator INT32)
+  (base-width INT32)
+  (base-height INT32)
+  (win-gravity INT32))
+
+(define-public (window-hints win)
+  (xcb-struct-unpack
+   wm-size-hints
+   (open-bytevector-input-port
+    (list->u8vector
+     (vector->list
+      (xref
+       (get-text-property win (pre-defined-atom 'wm-normal-hints))
+       'value))))))
