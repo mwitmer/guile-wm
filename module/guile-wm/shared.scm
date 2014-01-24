@@ -14,11 +14,55 @@
 ;;    along with Guile-WM.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (guile-wm shared)
+  #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-9 gnu)
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (guile-wm log)
   #:export (use-wm-modules)
-  #:replace (with-input-from-string))
+  #:replace (with-input-from-string make-wm-hook))
+
+(define-record-type wm-hook
+  (make-wm-hook-inner arity procs)
+  wm-hook?
+  (arity wm-hook-arity)
+  (procs wm-hook-procs set-wm-hook-procs!))
+
+(set-record-type-printer!
+ wm-hook
+ (lambda (r port)
+   (format port "#<wm-hook ~a" (wm-hook-arity r))
+   (for-each
+    (lambda (proc)
+      (if (procedure-name proc) (format port " ~a" (procedure-name proc)) " ?"))
+    (wm-hook-procs r))
+   (format port ">")))
+
+(define-public (wm-hook-empty? hook)
+  (null? (wm-hook-procs hook)))
+
+(define* (make-wm-hook #:optional (arity 0))
+  (make-wm-hook-inner arity '()))
+
+(define-public (add-wm-hook! hook proc)
+  (if (not (= (car (procedure-minimum-arity proc)) (wm-hook-arity hook)))
+      (error "wm-hook: proc and hook's arity do not match"))
+  (if (not (memq proc (wm-hook-procs hook)))
+      (set-wm-hook-procs! hook (cons proc (wm-hook-procs hook))))
+  *unspecified*)
+
+(define-public (remove-wm-hook! hook proc)
+  (set-wm-hook-procs! hook (delq proc (wm-hook-procs hook)))
+  *unspecified*)
+
+(define-public (clear-wm-hook! hook)
+  (set-wm-hook-procs! hook '())
+  *unspecified*)
+
+(define-public (run-wm-hook hook . args)
+  (if (not (= (length args) (wm-hook-arity hook)))
+      (error "wm-hook: Wrong length argument list"))
+  (for-each (lambda (proc) (apply proc args)) (wm-hook-procs hook)))
 
 (define-public current-root (make-parameter #f))
 (define-public current-screen (make-parameter #f))
