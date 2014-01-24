@@ -43,7 +43,10 @@
 
 (define (run-keymap get)
   (define keymap
-    (keymap-attach root-keymap (lambda (d) (message "Unknown key")) keymap-void identity))
+    (keymap-attach
+     root-keymap
+     (lambda (d) (message (format #f "Unknown key: ~a" d)))
+     keymap-void identity))
   (grab-pointer #t target-win '() 'async 'async (xcb-none xwindow) 
                 (or keymap-cursor-val (xcb-none xcursor)) 0)
   (grab-keyboard #f target-win 0 'async 'async)
