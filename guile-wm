@@ -82,20 +82,17 @@
     '((version   (single-char #\v) (value #f))
       (init-file (single-char #\i) (value #t))
       (log-file  (single-char #\l) (value #t))
-      (quick     (single-char #\q) (value #f))
       (help      (single-char #\h) (value #f))))
   (define options (getopt-long (command-line) option-spec))
   (define help-wanted? (option-ref options 'help #f))
   (define version-wanted? (option-ref options 'version #f))
-  (define quick-mode? (option-ref options 'quick #f))
   (define log-file (option-ref
                     options 'log-file
-                    (format #f "~a/guile-wm.log" (getenv "HOME"))))
+                    (format #f "/tmp/guile-wm.log")))
   (define init-file
-    (if quick-mode? #f
-        (option-ref
-         options 'init-file
-         (format #f "~a/.guile-wm" (getenv "HOME")))))
+    (option-ref
+     options 'init-file
+     (format #f "~a/.guile-wm" (getenv "HOME"))))
   (if (or version-wanted? help-wanted?)
       (begin
         (if version-wanted? (display "Guile-WM version 0.1\n"))
@@ -104,7 +101,6 @@
      guile-wm [options]
        -v, --version    Display version
        -i, --init-file  Use the given init file (default \"$HOME/.guile-wm\")
-       -l, --log-file   Use the given log file (defaults \"$HOME/guile-wm.log\")
-       -q, --quick      Run without any init file
+       -l, --log-file   Use the given log file (defaults \"/tmp/guile-wm.log\")
        -h, --help       Display this help\n")))
       (begin-event-loop init-file log-file)))
