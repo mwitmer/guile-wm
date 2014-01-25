@@ -27,16 +27,16 @@
 
 (define wm-name-atom (pre-defined-atom 'wm-name))
 
-(define-public (request-text-property win atom)
+(define-public (request-window-property win atom)
   (delay-reply get-property #f win atom (pre-defined-atom 'any) 0 max-length))
 
-(define-public (get-text-property win atom)
-  (solicit (request-text-property win atom)))
+(define-public (get-window-property win atom)
+  (solicit (request-window-property win atom)))
 
-(define-public (text-property-value get-property-reply)
+(define-public (window-property-value get-property-reply)
   (xref-string get-property-reply 'value))
 
-(define-public (text-property-type get-property-reply)
+(define-public (window-property-type get-property-reply)
   (xref get-property-reply 'type))
 
 (define (force-requests reqs)
@@ -48,11 +48,11 @@
   (force-requests (map make-request wins)))
 
 (define-public (window-names wins)
-  (define (make-request win) (request-text-property win wm-name-atom))
-  (map text-property-value (force-requests (map make-request wins))))
+  (define (make-request win) (request-window-property win wm-name-atom))
+  (map window-property-value (force-requests (map make-request wins))))
 
 (define-public (window-name win)
-  (text-property-value (get-text-property win wm-name-atom)))
+  (window-property-value (get-window-property win wm-name-atom)))
 
 (define-public (top-level-windows)
   (define query-tree (reply-for query-tree (current-root)))
@@ -94,5 +94,5 @@
     (list->u8vector
      (vector->list
       (xref
-       (get-text-property win (pre-defined-atom 'wm-normal-hints))
+       (get-window-property win (pre-defined-atom 'wm-normal-hints))
        'value))))))
