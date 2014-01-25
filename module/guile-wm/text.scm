@@ -44,7 +44,7 @@
     (else `(output-text ,text))))
   exp)
 
-(define-public (measure-text text font-string)
+(define (measure-text text font-string)
   (define font-info (with-font (font-string font) (reply-for query-font font)))
   (define ascent (xref font-info 'font-ascent))
   (define descent (xref font-info 'font-descent))
@@ -77,7 +77,7 @@
           (('start-new-line) (unescape (string-append unescaped "\n")))
           (('output-text m) (unescape (string-append unescaped m))))))))
 
-(define-public (display-text text dimens target font-name fg bg)
+(define (display-text text dimens target font-name fg bg)
   (define cmap (xref (current-screen) 'default-colormap))
   (define (->pixel sym) (pixel-for-color cmap sym))
   (with-input-from-string text
