@@ -261,7 +261,11 @@
            (not (xid= x-window blank-x-window)))
       (unmap-window blank-x-window))
   (fit-x-window! x-window tile)
-  (discard-hidden-x-window! x-window))
+  (discard-hidden-x-window! x-window)
+  (when (and most-recent-x-window (xid= x-window most-recent-x-window))
+    (if (q-empty? hidden-x-windows)
+        (set! most-recent-x-window #f)
+        (set! most-recent-x-window (last (car hidden-x-windows))))))
 
 (define (fit-x-window! x-window tile)
   (define geom (reply-for get-geometry x-window))
