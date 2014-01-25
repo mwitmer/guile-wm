@@ -46,7 +46,6 @@
            converted)))))
 
 (define (compile-scheme exp env opts)
-  (format #t "~a\n" (arg-missing))
   (let* ((command (get-command (car exp)))
          (typed-exp
           (if (list? command)
