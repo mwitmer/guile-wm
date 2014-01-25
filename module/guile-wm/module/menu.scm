@@ -40,7 +40,7 @@
 (define (point-circulate state row-count row)
   (values state row-count (if (= (+ row 1) row-count) 0 (+ row 1))))
 
-(define-keymap menu-keymap ()
+(define-keymap menu-keymap
   (C-g         => cancel)
   (escape      => cancel)
   (C-n         => point-down)
@@ -52,15 +52,13 @@
 
 (define menu-active? (make-parameter #f))
 (define-once menu-window #f)
-(define menu-key-tag (make-tag 'menu))
 
 (define (run-keymap get put prompt choice-alist action default)
   (define choice-vlist (list->vlist (map car choice-alist)))
-  (define keymap (keymap-attach menu-keymap keymap-ignore show process))
-  (define (loop . args) (apply keymap-lookup keymap get args))
-  (define (show state row-count row)
-    (put (vlist-cons prompt choice-vlist) (+ 1 row)) 
-    (values state row-count row))
+  (define keymap (keymap-with-default menu-keymap keymap-ignore))
+  (define (loop state row-count row)
+    (put (vlist-cons prompt choice-vlist) (+ 1 row))
+    (process (keymap-lookup keymap get state row-count row)))
   (define ((finish row) state)
     (case state 
       ((execute) (action (cdr (list-ref choice-alist row))))
@@ -85,7 +83,7 @@
 
 (define-public (menu prompt choice-alist action default)
   (define (run-menu)
-    (define get-next-key (keystroke-listen! menu-window menu-key-tag))
+    (define get-next-key (keystroke-listen! menu-window))
     (define (update-text text row)
       (put-text (prepare-text text row) menu-window 'white 'black font-string))
     (map-window menu-window)

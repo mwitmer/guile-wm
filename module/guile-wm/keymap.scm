@@ -18,21 +18,18 @@
   #:export (define-keymap create-keymap define-keymap-once))
 
 (define-record-type keymap
-  (make-keymap-inner mappings before after default)
+  (make-keymap-inner mappings default)
   keymap?
   (mappings mappings)
-  (after after set-after!)
-  (before before set-before!)
   (default default set-default!))
 
-(define-public (keymap-void . args) (apply values args))
 (define-public (keymap-ignore key . args) (apply values args))
 
-(define* (make-keymap #:key default before after)
-  (make-keymap-inner (make-hash-table) before after default))
+(define* (make-keymap #:optional default)
+  (make-keymap-inner (make-hash-table) default))
 
-(define-public (keymap-attach keymap default before after)
-  (make-keymap-inner (mappings keymap) before after default))
+(define-public (keymap-with-default keymap default)
+  (make-keymap-inner (mappings keymap) default))
 
 (define-public (bind-key! keymap key proc-or-keymap)
   (if (not (or (procedure? proc-or-keymap) (keymap? proc-or-keymap)))
@@ -44,38 +41,37 @@
 
 (define-syntax define-keymap-once
   (syntax-rules ()
-    ((_ name (args ...) mapping ...)
-     (define-once name (create-keymap (args ...) mapping ...)))))
+    ((_ name mapping ...)
+     (define-once name (create-keymap mapping ...)))))
 
 (define-syntax define-keymap
   (syntax-rules ()
-    ((_ name (args ...) mapping ...)
-     (define name (create-keymap (args ...) mapping ...)))))
+    ((_ name mapping ...)
+     (define name (create-keymap mapping ...)))))
 
 (define-syntax create-keymap
   (syntax-rules ()
-    ((_ (args ...) mapping ...)
-     (let ((km (make-keymap args ...)))
+    ((_ mapping ...)
+     (let ((km (make-keymap)))
        (make-mapping km mapping) ... km))
-    ((_ (args ...) 
-        mapping ...)
-     (let ((km (make-keymap args ...)))
+    ((_ mapping ...)
+     (let ((km (make-keymap)))
        (make-mapping km mapping) ... km))))
 
 (define-syntax make-mapping
-  (syntax-rules ()
+  (syntax-rules (=> :)
     ((_ km ((k args ...) stmt ...))
      (bind-key! km (quasiquote k) (lambda (args ...) stmt ...)))
     ((_ km (k => proc))
-     (bind-key! km (quasiquote k) (lambda args (apply proc args))))))
+     (bind-key! km (quasiquote k) (lambda args (apply proc args))))
+    ((_ km (k : nkm))
+     (bind-key! km (quasiquote k) nkm))))
 
 (define-public (keymap-lookup keymap key-provider . args)
-  (call-with-values (lambda () (apply (before keymap) args))
-    (lambda from-before
-      (let* ((key (key-provider))
-             (val (hashq-ref (mappings keymap) key)))
-        (let ((result
-               (cond ((keymap? val) (apply keymap-lookup val key-provider args))
-                     ((procedure? val) (lambda () (apply val from-before)))
-                     (else (lambda () (apply (default keymap) key from-before))))))
-          ((after keymap) result))))))
+  (let* ((key (key-provider))
+         (val (hashq-ref (mappings keymap) key)))
+    (let ((result
+           (cond ((keymap? val) (apply keymap-lookup val key-provider args))
+                 ((procedure? val) (lambda () (apply val args)))
+                 (else (lambda () (apply (default keymap) key args))))))
+      result)))

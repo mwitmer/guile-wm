@@ -43,10 +43,9 @@
 
 (define (run-keymap get)
   (define keymap
-    (keymap-attach
+    (keymap-with-default
      root-keymap
-     (lambda (d) (message (format #f "Unknown key: ~a" d)))
-     keymap-void identity))
+     (lambda (d) (message (format #f "Unknown key: ~a" d)))))
   (grab-pointer #t target-win '() 'async 'async (xcb-none xwindow) 
                 (or keymap-cursor-val (xcb-none xcursor)) 0)
   (grab-keyboard #f target-win 0 'async 'async)
@@ -56,8 +55,7 @@
     (unmap-window message-window)
     action))
 
-(define-keymap-once root-keymap ())
-(define root-key-tag (make-tag 'root))
+(define-keymap-once root-keymap)
 (define-once target-win #f)
 
 (define-once keymap-cursor-val #f)
@@ -98,4 +96,4 @@ keymap while minibuffers, menus, and so on are active."
  (lambda ()
    (set! target-win (current-root))
    (set! (root-key) root-key-val)
-   (get-next-key (keystroke-listen! target-win root-key-tag))))
+   (get-next-key (keystroke-listen! target-win))))

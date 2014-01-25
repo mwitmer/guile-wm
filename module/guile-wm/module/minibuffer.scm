@@ -37,7 +37,7 @@
 (define (cancel data) (set-data-state data 'cancel))
 (define (execute data) (set-data-state data 'execute))
 
-(define-keymap minibuffer-keymap ()
+(define-keymap minibuffer-keymap
   (C-g         => cancel)
   (escape      => cancel)
   (return      => execute)
@@ -61,16 +61,17 @@
   (C-k         => kill-to-end-of-line))
 
 (define (run-keymap get put prompt action)
-  (define keymap (keymap-attach minibuffer-keymap default show process))
+  (define keymap (keymap-with-default minibuffer-keymap default))
   (define (default key data)
     (or (and=> (sym->printable key) (lambda (p) (point-insert data p))) data))
-  (define (loop data) (keymap-lookup keymap get data))
+  (define (loop data) 
+    (prepare-and-put data)
+    (process (keymap-lookup keymap get data)))
   (define (prepare-and-put data)
     (let ((x (car (data-point data))) (y (cdr (data-point data)))
           (first-line (string-append prompt (vlist-head (data-text data)))))
       (put (vlist-cons first-line (vlist-tail (data-text data)))
            (cons (if (= y 0) (+ x (string-length prompt)) x) y))))
-  (define (show data) (prepare-and-put data) data)
   (define ((finish data) state)
     (define command (string-join (vlist->list (data-text data))))
     (case state
@@ -121,7 +122,7 @@
 (define* (minibuffer prompt #:optional action)
   (define (run-minibuffer)
     (define get-next-key
-      (keystroke-listen! minibuffer-window minibuffer-key-tag))
+      (keystroke-listen! minibuffer-window))
     (define (update-text text point)
       (put-text
        (prepare-text text point) minibuffer-window 'white 'black font-string))
@@ -147,7 +148,6 @@
 
 (define minibuffer-active? (make-parameter #f))
 (define-once minibuffer-window #f)
-(define minibuffer-key-tag (make-tag 'minibuffer))
 
 (register-guile-wm-module!
  (lambda () (set! minibuffer-window (fixed-window-create 0 0 200 20 0))))

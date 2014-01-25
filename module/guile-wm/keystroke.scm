@@ -26,13 +26,13 @@
                  left-meta right-meta
                  right-shift left-super right-super menu))
 
-(define-public (keystroke-listen! win tag)
+(define-public (keystroke-listen! win)
   "Returns a procedure that will solicit a keypress with WIN focused
 and return the associated key symbol. The returned procedure takes the
 same arguments as `solicit'. TAG is a unique name for the listener, as
 described in `create-tagged-listener'."
   (receive (stop! reset!)
-   (create-tagged-listener tag
+   (create-tagged-listener win
        (stop! reset!
               (define keysym-table (make-keysym-table))
               (define modifier-table (make-modifier-table))
@@ -42,13 +42,13 @@ described in `create-tagged-listener'."
       (define sym 
         (key->symbol modifier-table keysym-table (xref key-press 'detail)
                      (xref key-press 'state) num-lock-modifier))
-      (if (not (memq sym modifier-keys)) (notify tag sym)))
-     ((destroy-notify-event destroy-notify #:event win) (unsolicit tag) (stop!))
+      (if (not (memq sym modifier-keys)) (notify win sym)))
+     ((destroy-notify-event destroy-notify #:event win) (unsolicit win) (stop!))
      ((unmap-notify-event notify #:window win) (stop!))
      ((mapping-notify-event mapping) (reset!)))
    (case-lambda
-     (() (solicit tag))
+     (() (solicit win))
      ((proc) 
       (if (not proc) (stop!))
-      (solicit tag proc)))))
+      (solicit win proc)))))
 
