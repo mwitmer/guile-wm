@@ -75,12 +75,10 @@ keymap while minibuffers, menus, and so on are active."
 
 (define (get-next-key get)
   (define (process-root-key key)
-    (if (eq? key (root-key))
-        (if (root-keymap-enabled?)
-            (let ((action (run-keymap get)))
-              (get process-root-key)
-              (action))
-            (get process-root-key))
+    (if (and (eq? key (root-key)) (root-keymap-enabled?))
+        (let ((action (run-keymap get)))
+          (get process-root-key)
+          (action))
         (get process-root-key)))
   (get process-root-key))
 
