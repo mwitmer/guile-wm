@@ -75,17 +75,14 @@ the window will also keep the focus."
     (basic-window-create
      x y width height border
      (cons 'visibility-change events)))
-  (define previous-window #f)
   (create-listener (stop!)
     ((map-notify-event map-notify #:window window)
-     (set! previous-window (xref (reply-for get-input-focus) 'focus))
-     (if focused? (set-focus (xref map-notify 'window))))
+     (when focused?
+       (grab-keyboard #t window xcb-current-time 'async 'async)))
     ((unmap-notify-event unmap-notify #:window window)
-     (if (and previous-window (memv (xid->integer previous-window)
-                                    (map xid->integer (reparented-windows))))
-         (set-focus previous-window)))
+     (when focused?
+       (ungrab-keyboard xcb-current-time)))
     ((visibility-notify-event visibility #:window window)
      (when (not (eq? (xref visibility 'state) 'unobscured))
-       (configure-window (xref visibility 'window) #:stack-mode 'above)
-       (if focused? (set-focus (xref visibility 'window))))))
+       (configure-window (xref visibility 'window) #:stack-mode 'above))))
   window)
