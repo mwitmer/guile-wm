@@ -1,4 +1,4 @@
->(define-module (guile-wm module tiling)
+(define-module (guile-wm module tiling)
   #:use-module (guile-wm module randr)
   #:use-module (guile-wm module window-menu)
   #:use-module (guile-wm reparent)
@@ -163,6 +163,17 @@
           (let ((el (if (coords-in? (split-element1 split) x y)
                         (split-element1 split) (split-element2 split))))
             (if (split? el) (lp el) el))))))
+
+(define (tile-for x-window)
+  (let lp-frame ((frames frame-list))
+    (if (null? frames) #f
+        (let lp-win ((el (car frames)))
+          (cond ((frame? el) (or (lp-win (frame-content el))
+                                 (lp-frame (cdr frames))))
+                ((split? el) (or (lp-win (split-element1 el))
+                                 (lp-win (split-element2 el))))
+                ((tile? el) (if (xid= (tile-window el) x-window)
+                                el #f)))))))
 
 ;; Location of tiles relative to one another
 ;; TODO: Remove the assumption that tiles are all contiguous
@@ -475,10 +486,17 @@
 (if (module-defined? (current-module) 'tiling-menu-select-window)
     (remove-wm-hook! screen-change-hook tiling-menu-select-window))
 
-(define (tiling-menu-select-window win)
-  (move-x-window! (window-parent win) selected-tile)
-  (discard-hidden-x-window! (window-parent win))
-  (select-tile selected-tile))
+(define (tiling-menu-select-window x-window)
+  (define parent (window-parent x-window))
+  (define (restore-hidden-window)
+    (discard-hidden-x-window! parent)
+    (if (not (tile-empty? selected-tile))
+        (hide-x-window! (tile-window selected-tile)))
+    (move-x-window! parent selected-tile)
+    (select-tile selected-tile))
+  (or
+   (and=> (tile-for parent) select-tile)
+   (restore-hidden-window)))
 
 (add-wm-hook! menu-select-window-hook tiling-menu-select-window)
 
