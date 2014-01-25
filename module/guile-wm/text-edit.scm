@@ -22,7 +22,8 @@
             set-data-state
             data-text
             data-point
-            data-state))
+            data-state
+            define-text-modifier))
 
 (define-immutable-record-type text-edit-data
   (make-text-edit-data state point text)
@@ -30,6 +31,11 @@
   (state data-state set-data-state)
   (point data-point set-data-point)
   (text data-text set-data-text))
+
+(define-public (empty-text-edit-data initial-state)
+  (make-text-edit-data
+   initial-state (cons 0 0)
+   (vlist-cons "" vlist-null)))
 
 (define (constrain start end n)
   (cond ((< n start) start)
@@ -161,7 +167,8 @@
   (define new-point (move-n text x y 1))
   (values text (car new-point) (cdr new-point)))
 (define-text-modifier (point-insert text x y str)
-  (values (replace-line text y (insert-text text str x y)) (+ x 1) y))
+  (values (replace-line text y (insert-text text str x y))
+          (+ x (string-length str)) y))
 (define-text-modifier (delete-backwards text x y)
   (define new-point (move-n text x y -1))
   (values (kill-text text new-point (cons x y)) 

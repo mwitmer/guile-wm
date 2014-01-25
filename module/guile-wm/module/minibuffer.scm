@@ -82,8 +82,7 @@
     (case (data-state data)
       ((read) (loop data))
       (else => (finish data))))
-  (with-root-keymap-disabled
-   (loop (make-text-edit-data 'read (cons 0 0) (vlist-cons "" vlist-null)))))
+  (with-root-keymap-disabled (loop (empty-text-edit-data 'read))))
 
 (define (prepare-text unescaped-lines point)
   (define row (cdr point))
