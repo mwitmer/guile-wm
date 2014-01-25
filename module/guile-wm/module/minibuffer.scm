@@ -74,8 +74,8 @@
   (define ((finish data) state)
     (define command (string-join (vlist->list (data-text data))))
     (case state
-      ((execute) (action command))
-      ((cancel) (log! "Minibuffer cancelled."))))
+      ((execute) (if action (action command) command))
+      ((cancel) (log! "Minibuffer cancelled.") *unspecified*)))
   (define (process get-data)
     (define data (get-data))
     (case (data-state data)
@@ -118,7 +118,7 @@
                   (vlist-drop lines (+ row 1))))
    "\n"))
 
-(define-public (minibuffer prompt action)
+(define* (minibuffer prompt #:optional action)
   (define (run-minibuffer)
     (define get-next-key
       (keystroke-listen! minibuffer-window minibuffer-key-tag))
@@ -127,18 +127,23 @@
        (prepare-text text point) minibuffer-window 'white 'black font-string))
     (map-window minibuffer-window)
     (configure-window minibuffer-window #:stack-mode 'above #:height 10 #:width 10)
-    (run-keymap get-next-key update-text prompt action)
-    (unmap-window minibuffer-window))
+    (let ((result (run-keymap get-next-key update-text prompt action)))
+      (unmap-window minibuffer-window)
+      result))
   (if (not (minibuffer-active?))
       (parameterize ((minibuffer-active? #t)) (run-minibuffer))))
 
+(define (get-additional-arg arg-name type)
+  (minibuffer (format #f "~a [~a]: " arg-name (keyword->symbol type))))
+
 (define-command (prompt-for-eval)
   (minibuffer "eval: " (lambda (cmd) (message (format #f "~a" (wm-eval cmd))))))
-(define-command (prompt-for-command) (minibuffer "command: " run-command))
+
+(define-command (prompt-for-command)
+  (run-command (minibuffer "command: ") get-additional-arg))
+
 (define-command (prompt-for-shell-command)
   (minibuffer "/usr/bin/sh -c: " shell-command))
-(define-command (prompt-for-no-reason)
-  (minibuffer "type something: " identity))
 
 (define minibuffer-active? (make-parameter #f))
 (define-once minibuffer-window #f)

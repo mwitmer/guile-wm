@@ -26,7 +26,7 @@
   #:use-module (language scheme spec)
   #:use-module (system base compile)
   #:replace (quit)
-  #:export (define-command shell-command bind-key-commands))
+  #:export (define-command shell-command bind-key-commands run-command))
 
 (define-public (bind-key-command! keymap key str)
   (bind-key! keymap key (lambda () (run-command str))))
@@ -43,27 +43,32 @@
      (begin
        (define! 'name
          (let ((proc (lambda (arg ...) stmt ...)))
-           (hashq-set! commands (quote name) '(type ...))
+           (hashq-set! commands (quote name) `(,(cons 'arg type) ...))
            proc))
        (export name)))
     ((_ (name arg type) stmt ...)
      (begin
        (define! 'name
          (let ((proc (lambda arg stmt ...)))
-           (hashq-set! commands (quote name) type)
+           (hashq-set! commands (quote name) (cons 'arg type))
            proc))
        (export name)))))
 
-(define-public (run-command cmd)
+(define (arg-missing-default type)
+  (error "guile-wm: Cannot request missing argument of type " type))
+
+(define* (run-command cmd #:optional (arg-missing-proc arg-missing-default))
   (catch #t
     (lambda ()
       (log! (format #f "User command: ~a" (unescape-text cmd)))
       (with-input-from-string (format #f "(~a)" (unescape-text cmd))
-        (lambda () (read-and-compile
-                    (current-input-port)
-                    #:from command
-                    #:to 'value
-                    #:env (current-module)))))
+        (lambda ()
+          (parameterize ((arg-missing arg-missing-proc))
+            (read-and-compile
+             (current-input-port)
+             #:from command
+             #:to 'value
+             #:env (current-module))))))
     (lambda args
       (log! (format #f "Error in command: ~a ~a" cmd args)))
     (lambda args
@@ -77,10 +82,10 @@
 (define-command (shell-command commands #:string)
   (close-port (open-pipe (string-join commands) OPEN_READ)))
 
-(define-command (wm-eval (arg #:string)) 
+(define-command (wm-eval (exp #:string))
   (catch #t
     (lambda ()
-      (with-input-from-string arg
+      (with-input-from-string exp
         (lambda () (read-and-compile
                     (current-input-port)
                     #:from scheme
