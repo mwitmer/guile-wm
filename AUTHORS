@@ -1,1 +1,3 @@
 Guile-WM is written and maintained by Mark Witmer (mark@markwitmer.com), Copyright (c) 2013.
+
+Dave Thompson (dthompson2@worcester.edu) submitted a patch fixing a crash in tinywm
