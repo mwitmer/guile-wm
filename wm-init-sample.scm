@@ -24,10 +24,7 @@
 ;; wm-modules: cursor root-keymap
 ;; wm-modules: minibuffer repl randr fullscreen 
 ;; wm-modules: menu message window-menu time simple-reparent
-;; wm-modules: simple-focus window-cycle
-
-;; Or you can just use (use-modules ...)
-(use-modules (guile-wm module tinywm))
+;; wm-modules: simple-focus window-cycle tinywm
 
 ;; Command helpers
 (define-command (emacs) (shell-command "emacsclient -c"))
