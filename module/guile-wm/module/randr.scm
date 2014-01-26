@@ -329,7 +329,7 @@ to SetCrtcConfig"))
 
 (wm-init
  (lambda ()
-   (define enable-randr (solicit (delay-enable-extension 'randr)))
-   (select-input (current-root) '(crtc-change screen-change output-change))
-   (listen! screen-change-notify-event 'screen-change-notify setup-randr)
-   (setup-randr #f)))
+   (when (solicit (delay-enable-extension 'randr))
+     (select-input (current-root) '(crtc-change screen-change output-change))
+     (listen! screen-change-notify-event 'screen-change-notify setup-randr)
+     (setup-randr #f))))
