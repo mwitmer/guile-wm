@@ -20,7 +20,8 @@
   #:use-module (xcb xml xproto)
   #:use-module (guile-wm log)
   #:export (use-wm-modules)
-  #:replace (with-input-from-string make-wm-hook))
+  #:replace (with-input-from-string make-wm-hook
+              wm-init))
 
 (define-record-type wm-hook
   (make-wm-hook-inner arity procs)
@@ -70,11 +71,24 @@
 (define module-init-thunks (make-hash-table))
 (define-public obscured-windows (make-hash-table))
 
-(define-public (register-guile-wm-module! thunk)
-  "Register the current module so that it can be initialized once the
+(define-syntax wm-init
+  (syntax-rules ()
+   "Register the current module so that it can be initialized once the
 window manager is running. THUNK will be executed after
 `current-xcb-connection' is set to the window manager's X connection."
-  (hashq-set! module-init-thunks (current-module) thunk))
+   ((_ t) (define %guile-wm-init-proc t))))
+
+(define-syntax use-wm-modules
+  (syntax-rules ()
+    ((_ m ...)
+     (begin
+       (use-modules (guile-wm module m) ...)
+       (let ((mod (resolve-module '(guile-wm module m))))
+         (if (module-defined? mod '%guile-wm-init-proc)
+             (hashq-set!
+              module-init-thunks
+              mod
+              (@@ (guile-wm module m) %guile-wm-init-proc)))) ...))))
 
 (define-public (init-guile-wm-modules!)
   "Call all of the initialization thunks for registered window manager

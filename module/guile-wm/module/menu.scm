@@ -92,5 +92,5 @@
     (unmap-window menu-window))
   (if (not (menu-active?)) (parameterize ((menu-active? #t)) (run-menu))))
 
-(register-guile-wm-module!
+(wm-init
  (lambda () (set! menu-window (fixed-window-create 0 0 200 20 0))))

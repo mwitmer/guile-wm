@@ -90,7 +90,7 @@ keymap while minibuffers, menus, and so on are active."
    (lambda () keymap-cursor-val)
    (lambda (sym) (set! keymap-cursor-val (make-cursor sym)))))
 
-(register-guile-wm-module!
+(wm-init
  (lambda ()
    (set! target-win (current-root))
    (set! (root-key) root-key-val)

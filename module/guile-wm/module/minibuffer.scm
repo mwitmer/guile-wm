@@ -148,5 +148,5 @@
 (define minibuffer-active? (make-parameter #f))
 (define-once minibuffer-window #f)
 
-(register-guile-wm-module!
+(wm-init
  (lambda () (set! minibuffer-window (fixed-window-create 0 0 200 20 0))))

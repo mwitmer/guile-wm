@@ -400,7 +400,7 @@
     (select-tile win))
   (allow-events 'replay-pointer (xref button-press 'time)))
 
-(register-guile-wm-module!
+(wm-init
  (lambda ()
    (set! frame-list (detect-frames))
    (set! blank-x-window (basic-window-create 0 0 200 20 2))

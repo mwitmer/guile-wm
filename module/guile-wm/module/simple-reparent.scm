@@ -28,7 +28,7 @@
    set-focus)
   (allow-events 'replay-pointer (xref button-press 'time)))
 
-(register-guile-wm-module!
+(wm-init
  (lambda () 
    (set! reparents (make-hash-table))
    (end-redirect!)

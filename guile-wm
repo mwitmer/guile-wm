@@ -46,7 +46,7 @@
         (cond
          ((eof-object? raw-name) names)
          ((list? raw-name) (read-name (cons raw-name names) (read)))
-         (else (read-name (cons `(guile-wm module ,raw-name) names) (read))))))
+         (else (read-name (cons raw-name names) (read))))))
     (with-input-from-string str read-names))
   (define (read-modules)
     (let get-imports ((to-import '()) (l (read-line)))
@@ -58,7 +58,7 @@
           (or (and=> (regexp-exec wm-modules-spec l) get-imports-from-match)
               (get-imports to-import (read-line))))))
   (define module-list (with-input-from-file init-file read-modules))
-  (cons 'use-modules module-list))
+  (cons 'use-wm-modules module-list))
 
 (define (begin-event-loop init-file log-file)
   (define xcb-conn (xcb-connect!))

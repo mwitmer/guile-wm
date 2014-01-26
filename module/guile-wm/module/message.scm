@@ -45,5 +45,5 @@
 (define-once message-window #f)
 (define message-key-tag (make-tag 'message))
 
-(register-guile-wm-module!
+(wm-init
  (lambda () (set! message-window (fixed-window-create 0 0 200 20 0 #:focused? #f))))

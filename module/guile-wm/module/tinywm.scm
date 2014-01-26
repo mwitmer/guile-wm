@@ -74,7 +74,7 @@
       (set-focus (assv-ref (reverse-reparents) (xid->integer (win))))
       (on-window-click (win) button-press))))
 
-(register-guile-wm-module!
+(wm-init
  (lambda ()
    (create-listener ()
      ((motion-notify-event #:event (current-root))  => on-motion-notify)

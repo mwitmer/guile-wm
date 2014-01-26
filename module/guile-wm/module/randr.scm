@@ -327,7 +327,7 @@ to SetCrtcConfig"))
     (mode-infos (get-mode-infos))
     (run-wm-hook screen-change-hook)))
 
-(register-guile-wm-module!
+(wm-init
  (lambda ()
    (define enable-randr (solicit (delay-enable-extension 'randr)))
    (select-input (current-root) '(crtc-change screen-change output-change))

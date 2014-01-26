@@ -57,6 +57,6 @@
     #:border-pixel (pixel-for-color cmap simple-focus-color-val))
   (set! current-focus new))
 
-(register-guile-wm-module!
+(wm-init
  (lambda ()
    (add-wm-hook! focus-change simple-focus-change)))
