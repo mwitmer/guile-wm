@@ -38,4 +38,4 @@
      (else (run-wm-hook menu-select-window-hook win))))
   (define focused-window (xref (reply-for get-input-focus) 'focus))
   (if (not (null? choices))
-   (menu "Select a window:" choices focus-window focused-window)))
+   (menu "Select a window:" choices focus-window)))

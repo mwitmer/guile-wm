@@ -62,7 +62,7 @@
   (define ((finish row) state)
     (case state 
       ((execute) (action (cdr (list-ref choice-alist row))))
-      ((cancel) (action default))))
+      ((cancel) (if default (action default)))))
   (define (process get-data)
     (call-with-values get-data
       (lambda (state row-count row)
@@ -81,7 +81,7 @@
       (vlist-drop lines (+ row 1)))))
   (string-join (vlist->list with-highlight) "\n"))
 
-(define-public (menu prompt choice-alist action default)
+(define* (menu prompt choice-alist action #:optional default)
   (define (run-menu)
     (define get-next-key (keystroke-listen! menu-window))
     (define (update-text text row)
