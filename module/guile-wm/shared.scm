@@ -56,7 +56,7 @@
   (set-wm-hook-procs! hook (delq proc (wm-hook-procs hook)))
   *unspecified*)
 
-(define-public (clear-wm-hook! hook)
+(define-public (reset-wm-hook! hook)
   (set-wm-hook-procs! hook '())
   *unspecified*)
 
