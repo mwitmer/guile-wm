@@ -78,7 +78,7 @@ the window will also keep the focus."
   (create-listener (stop!)
     ((map-notify-event map-notify #:window window)
      (when focused?
-       (grab-keyboard #t window xcb-current-time 'async 'async)))
+       (grab-keyboard #f window xcb-current-time 'async 'async)))
     ((unmap-notify-event unmap-notify #:window window)
      (when focused?
        (ungrab-keyboard xcb-current-time)))
