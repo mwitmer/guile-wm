@@ -3,4 +3,4 @@ autom4te.cache/*
 build/*
 /guile-wm.info
 /web/*
-/build_aux/texinfo.tex
+
