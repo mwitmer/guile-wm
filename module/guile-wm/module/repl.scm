@@ -24,9 +24,9 @@
   #:use-module (xcb xml)
   #:export (start-wm-repl))
 
-(define-public main-thread (current-thread))
+(define main-thread (current-thread))
 
-(define-public (post-to-main-thread thunk)
+(define (post-to-main-thread thunk)
   (define not-done (make-tag 'not-done))
   (define repl-results not-done)
   (define repl-thread (current-thread))
@@ -75,4 +75,3 @@ Post an expression to the event loop"
    (lambda () 
      (parameterize ((current-xcb-connection xcb-conn))
        (run-server sock)))))
-

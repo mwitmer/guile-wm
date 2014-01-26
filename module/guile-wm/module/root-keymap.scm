@@ -24,10 +24,10 @@
   #:use-module (guile-wm command)
   #:use-module (guile-wm draw)
   #:use-module (guile-wm shared)
-  #:use-module (guile-wm module cursor)
-  #:use-module (guile-wm module message)
   #:use-module (srfi srfi-11)
   #:export (root-keymap keymap-cursor with-root-keymap-disabled))
+
+(use-wm-modules message cursor)
 
 (define-once root-key-val 'C-t)
 (define (root-key-ref) root-key-val)

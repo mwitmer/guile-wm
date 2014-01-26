@@ -17,13 +17,14 @@
   #:use-module (guile-wm icccm)
   #:use-module (guile-wm command)
   #:use-module (guile-wm log)
-  #:use-module (guile-wm module menu)
   #:use-module (guile-wm focus)
   #:use-module (guile-wm reparent)
   #:use-module (guile-wm shared)
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop))
+
+(use-wm-modules menu)
 
 (define-public menu-select-window-hook (make-wm-hook 1))
 

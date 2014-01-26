@@ -43,12 +43,12 @@
    (lambda () simple-unfocus-color-val)
    (lambda (new-color) (set! simple-unfocus-color-val new-color))))
 
-(define-public (unfocus-window! win)
+(define (unfocus-window! win)
   (define cmap (xref (current-screen) 'default-colormap))
   (change-window-attributes (window-parent win)
     #:border-pixel (pixel-for-color cmap simple-unfocus-color-val)))
 
-(define-public (simple-focus-change old new)
+(define (simple-focus-change old new)
   (define cmap (xref (current-screen) 'default-colormap))
   (if (and old (reparented? old)) (unfocus-window! old))
   (if (and current-focus (is-window? current-focus))

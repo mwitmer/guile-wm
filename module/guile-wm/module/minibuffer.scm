@@ -21,7 +21,6 @@
   #:use-module (guile-wm draw)
   #:use-module (guile-wm keysyms)
   #:use-module (guile-wm command)
-  #:use-module (guile-wm module message)
   #:use-module (guile-wm module root-keymap)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm text-edit)
@@ -32,15 +31,17 @@
   #:use-module (xcb xml xproto)
   #:export (minibuffer minibuffer-keymap (font-string . minibuffer-font)))
 
+(use-wm-modules message)
+
 (define font-string "fixed")
 
-(define (cancel data) (set-data-state data 'cancel))
-(define (execute data) (set-data-state data 'execute))
+(define-public (keymap-cancel data) (set-data-state data 'cancel))
+(define-public (keymap-execute data) (set-data-state data 'execute))
 
 (define-keymap minibuffer-keymap
-  (C-g         => cancel)
-  (escape      => cancel)
-  (return      => execute)
+  (C-g         => keymap-cancel)
+  (escape      => keymap-cancel)
+  (return      => keymap-execute)
   (left        => point-left)
   (C-b         => point-left)
   (right       => point-right)

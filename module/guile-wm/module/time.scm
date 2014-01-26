@@ -16,7 +16,9 @@
 (define-module (guile-wm module time)
   #:use-module (ice-9 format)
   #:use-module (guile-wm command)
-  #:use-module (guile-wm module message))
+  #:use-module (guile-wm shared))
+
+(use-wm-modules message)
 
 (define month-alist
   '((0 . Jan)
