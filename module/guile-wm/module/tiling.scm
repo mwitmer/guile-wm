@@ -21,14 +21,7 @@
                                        destroy-notify-event allow-events
                                        change-window-attributes
                                        button-press-event
-                                       get-window-attributes))
-  #:export (horizontal-split vertical-split
-                             reveal-window
-                             select-down
-                             clear-frame
-                             select-up
-                             select-left
-                             select-right))
+                                       get-window-attributes)))
 
 ;;; Commentary:
 ;; This is a tiling window manager for guile-wm. It provides support
@@ -582,12 +575,12 @@
 
 (define-command (delete-split)
   (define container (tile-container selected-tile))
-  (for-each-tile
-   (lambda (tile) (and=> (tile-window tile) hide-x-window!)) container)
   (if (frame? container) #f
       (let ((new-tile
              (make-tile (split-height container) (split-width container)))
             (super (container-of container)))
+        (for-each-tile
+         (lambda (tile) (and=> (tile-window tile) hide-x-window!)) container)
         (cond
          ((split? super)
           (if (eq? (split-element1 super) container)
