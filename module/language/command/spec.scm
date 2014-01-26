@@ -32,7 +32,7 @@
 
 (define* (produce-args args types #:optional (converted '()))
   (cond
-   ((null? types) (reverse converted))
+   ((null? types) (map (lambda (c) `(quote ,c)) (reverse converted)))
    ((null? args)
     (let ((val ((arg-missing) (caar types) (cdar types))))
       (if (unspecified? val)
