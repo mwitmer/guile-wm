@@ -27,6 +27,9 @@
 (define screen-height (make-parameter #f))
 (define screen-width (make-parameter #f))
 
+(define-public tinywm-drag-end-hook (make-wm-hook 1))
+(define-public tinywm-resize-end-hook (make-wm-hook 1))
+
 (define (on-motion-notify motion-notify)
   (with-replies ((point query-pointer (current-root)) (geom get-geometry (win)))
     (define (box p g s) (if (> (+ p g) s) (- s g) p))
@@ -39,7 +42,10 @@
           #:height (- (xref point 'root-y) (xref geom 'y))))))
 
 (define (on-button-release button-release)
-  (ungrab-pointer xcb-current-time))
+  (ungrab-pointer xcb-current-time)
+  (if (eq? (action 'move))
+      (run-wm-hook tinywm-drag-end-hook (win))
+      (run-wm-hook tinywm-resize-end-hook (win))))
 
 (define (on-window-click window button-press)
   (define (start-action)
