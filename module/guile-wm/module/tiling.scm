@@ -21,7 +21,9 @@
                                        destroy-notify-event allow-events
                                        change-window-attributes
                                        button-press-event
-                                       get-window-attributes)))
+                                       get-window-attributes))
+  #:export (blank-x-window
+            selected-tile))
 
 ;;; Commentary:
 ;; This is a tiling window manager for guile-wm. It provides support
@@ -149,7 +151,7 @@
      ((coords-in? (car frames) x y) (car frames))
      (else (lp (cdr frames))))))
 
-(define (tile-at x y)
+(define-public (tile-at x y)
   (and-let* ((frame (frame-at x y)))
     (if (tile? (frame-content frame)) (frame-content frame)
         (let lp ((split (frame-content frame)))
@@ -157,7 +159,7 @@
                         (split-element1 split) (split-element2 split))))
             (if (split? el) (lp el) el))))))
 
-(define (tile-for x-window)
+(define-public (tile-for x-window)
   (let lp-frame ((frames frame-list))
     (if (null? frames) #f
         (let lp-win ((el (car frames)))
@@ -226,15 +228,18 @@
                                 'vertical tile1 tile2)))
     (split-tile tile tile1 tile2 new-split)))
 
-(define (move-tile old new)
-  (define has-backup? (q-empty? hidden-x-windows))
-  (and=> (tile-window new) hide-x-window!)
-  (move-x-window! (tile-window old) new)
-  (if has-backup?
-      (set-tile-window! old #f)
-      (let ((hidden-window (deq! hidden-x-windows)))
-        (move-x-window! hidden-window old)))
-  (select-tile new))
+(define-public (move-tile old new)
+  (cond
+   ((eq? old new) (fit-x-window! (tile-window new) new))
+   (else
+    (let ((has-backup? (q-empty? hidden-x-windows)))
+      (and=> (tile-window new) hide-x-window!)
+      (move-x-window! (tile-window old) new)
+      (if has-backup?
+          (set-tile-window! old #f)
+          (let ((hidden-window (deq! hidden-x-windows)))
+            (move-x-window! hidden-window old)))
+      (select-tile new)))))
 
 (define (for-each-tile proc el)
   (let lp ((content el))
