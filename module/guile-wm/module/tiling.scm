@@ -380,7 +380,7 @@
        (when (and (tile-window selected-tile)
                   (xid= (tile-window selected-tile) parent))
          (set-tile-window! selected-tile #f)
-         (reveal-window))
+         (restore-window))
        (stop!)))))
 
 (define (tiling-on-configure configure-request)
@@ -566,12 +566,16 @@
 
 (define-command (restore-window)
   (define most-recent most-recent-x-window)
-  (when most-recent
+  (cond
+   (most-recent
     (discard-hidden-x-window! most-recent-x-window)
     (if (not (tile-empty? selected-tile))
         (hide-x-window! (tile-window selected-tile)))
     (move-x-window! most-recent selected-tile)
-    (select-tile selected-tile)))
+    (select-tile selected-tile))
+   ((not (tile-window selected-tile))
+    (move-x-window! blank-x-window selected-tile)
+    (select-tile selected-tile))))
 
 (define-command (delete-split)
   (define container (tile-container selected-tile))
