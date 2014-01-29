@@ -1,4 +1,4 @@
-;; This file is part of Guile-WM.
+>;; This file is part of Guile-WM.
 
 ;;    Guile-WM is free software: you can redistribute it and/or modify
 ;;    it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 
 (define-module (guile-wm command)
   #:use-module (ice-9 popen)
+  #:use-module (ice-9 rdelim)
   #:use-module (ice-9 threads)
   #:use-module (xcb event-loop)
   #:use-module (xcb xml)
@@ -81,6 +82,12 @@
 
 (define-command (shell-command commands #:string)
   (close-port (open-pipe (string-join commands) OPEN_READ)))
+
+(define-command (shell-command-output cmd #:string)
+  (let* ((port (open-input-pipe (string-join cmd)))
+         (str (read-delimited "" port)))
+    (close-pipe port)
+    str))
 
 (define-command (wm-eval (exp #:string))
   (catch #t
