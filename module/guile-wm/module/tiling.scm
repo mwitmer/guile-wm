@@ -267,7 +267,7 @@
 
 (define (fit-x-window! x-window tile)
   (define geom (reply-for get-geometry x-window))
-  (define hints (window-hints x-window))
+  (define hints (window-size-hints x-window))
   (define height-inc (xref hints 'height-inc))
   (define width-inc (xref hints 'width-inc))
   (define target-height (- (tile-height tile) (* (xref geom 'border-width) 2)))

@@ -87,7 +87,7 @@
   (base-height INT32)
   (win-gravity INT32))
 
-(define-public (window-hints win)
+(define-public (window-size-hints win)
   (xcb-struct-unpack
    wm-size-hints
    (open-bytevector-input-port
