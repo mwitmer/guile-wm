@@ -19,23 +19,18 @@
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:export (make-text-edit-data
-            set-data-state
             data-text
             data-point
-            data-state
             define-text-modifier))
 
 (define-immutable-record-type text-edit-data
-  (make-text-edit-data state point text)
+  (make-text-edit-data point text)
   minibuffer-data?
-  (state data-state set-data-state)
   (point data-point set-data-point)
   (text data-text set-data-text))
 
-(define-public (empty-text-edit-data initial-state)
-  (make-text-edit-data
-   initial-state (cons 0 0)
-   (vlist-cons "" vlist-null)))
+(define-public (empty-text-edit-data)
+  (make-text-edit-data (cons 0 0) (vlist-cons "" vlist-null)))
 
 (define (constrain start end n)
   (cond ((< n start) start)
