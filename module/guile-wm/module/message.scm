@@ -26,25 +26,34 @@
 
 (define font-string "fixed")
 
+(define-public message-default-timeout 8)
 (define hide-message-thread #f)
 
-(define-command (message msg #:string)
+(define (show-message msg)
   (define screen (current-screen))
   (map-window message-window)
-  (put-text (string-join msg) message-window 'white 'black font-string)
+  (put-text msg message-window 'white 'black font-string)
   (configure-window message-window #:stack-mode 'above)
-  (if hide-message-thread (cancel-thread hide-message-thread))
+  (if hide-message-thread (cancel-thread hide-message-thread)))
+
+(define-command (message msg #:string)
+  (message-with-timeout (string-join msg) message-default-timeout))
+
+(define-command (message-with-timeout (msg #:string) (timeout #:number))
+  (show-message msg)
   (set!
    hide-message-thread
-   (make-thread
-    (lambda ()
-      (sleep 8)
-      (unmap-window message-window)
-      (set! hide-message-thread #f)))))
+   (make-thread (lambda () (sleep timeout) (hide-message)))))
 
-(define message-active? (make-parameter #f))
+(define-command (sticky-message msg #:string)
+  (show-message (string-join msg)))
+
+(define-command (hide-message)
+  (unmap-window message-window)
+  (if hide-message-thread (cancel-thread hide-message-thread))
+  (set! hide-message-thread #f))
+
 (define-once message-window #f)
-(define message-key-tag (make-tag 'message))
 
 (wm-init
  (lambda () (set! message-window (fixed-window-create 0 0 200 20 0 #:focused? #f))))
