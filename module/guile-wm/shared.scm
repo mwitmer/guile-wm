@@ -82,13 +82,14 @@ window manager is running. THUNK will be executed after
   (syntax-rules ()
     ((_ m ...)
      (begin
-       (use-modules (guile-wm module m) ...)
-       (let ((mod (resolve-module '(guile-wm module m))))
+       (let ((int (resolve-interface (if (list? 'm) 'm '(guile-wm module m))))
+             (mod (resolve-module (if (list? 'm) 'm '(guile-wm module m)))))
+         (module-use! (current-module) int)
          (if (module-defined? mod '%guile-wm-init-proc)
              (hashq-set!
               module-init-thunks
               mod
-              (@@ (guile-wm module m) %guile-wm-init-proc)))) ...))))
+              (module-ref mod '%guile-wm-init-proc)))) ...))))
 
 (define-public (init-guile-wm-modules!)
   "Call all of the initialization thunks for registered window manager
