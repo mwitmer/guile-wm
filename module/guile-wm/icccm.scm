@@ -87,12 +87,58 @@
   (base-height INT32)
   (win-gravity INT32))
 
+(define-xcb-struct wm-hints
+  (make-wm-hints
+   flags input initial-state icon-pixmap icon-x icon-y icon-mask window-group)
+  wm-hints? wm-hints-type #f 36
+  (flags CARD32)
+  (input CARD32)
+  (initial-state CARD32)
+  (icon-pixmap xpixmap)
+  (icon-window xwindow)
+  (icon-x INT32)
+  (icon-y INT32)
+  (icon-mask xpixmap)
+  (window-group xwindow))
+
+(define-xcb-struct wm-state
+  (make-wm-state state icon)
+  wm-state? wm-state-type #f 8
+  (state CARD32)
+  (icon xwindow))
+
+(define-public (window-struct-property win struct atom)
+  (define property (get-window-property win atom))
+  (define bv
+    (if (xid= (xref property 'type) (pre-defined-atom 'none)) #f
+        (list->u8vector (vector->list (xref property 'value)))))
+  (if (not bv) #f
+      (xcb-struct-unpack
+       struct
+       (open-bytevector-input-port
+        bv))))
+
+(define-public window-state-withdrawn 0)
+(define-public window-state-normal 1)
+(define-public window-state-iconic 3)
+
+(define-public (window-wm-hints win)
+  (window-struct-property win wm-hints (pre-defined-atom 'wm-hints)))
+
+(define (wm-state-atom) (xref (reply-for intern-atom #f "WM_STATE") 'atom))
+
+(define-public (window-state win)
+  (window-struct-property win wm-state (wm-state-atom)))
+
+(define-public (set-window-state! win state)
+  (define new-win-wm-state (make-wm-state state 0))
+  (format #t "Setting window state on ~a to ~a\n" win state)
+  (let ((property-atom (wm-state-atom)))
+   (change-property
+    'replace win property-atom property-atom 8
+    (list->vector
+     (u8vector->list (xcb-struct-pack-to-bytevector new-win-wm-state))))))
+
 (define-public (window-size-hints win)
-  (xcb-struct-unpack
-   wm-size-hints
-   (open-bytevector-input-port
-    (list->u8vector
-     (vector->list
-      (xref
-       (get-window-property win (pre-defined-atom 'wm-normal-hints))
-       'value))))))
+  (window-struct-property
+   win wm-size-hints (pre-defined-atom 'wm-normal-hints)))
