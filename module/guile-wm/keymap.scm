@@ -15,7 +15,8 @@
 
 (define-module (guile-wm keymap)
   #:use-module (srfi srfi-9)
-  #:export (define-keymap create-keymap define-keymap-once))
+  #:export (define-keymap create-keymap define-keymap-once
+             create-prompt-keymap define-prompt-keymap))
 
 (define-record-type keymap
   (make-keymap-inner mappings default)
@@ -34,7 +35,16 @@
 (define-public (bind-key! keymap key proc-or-keymap)
   (if (not (or (procedure? proc-or-keymap) (keymap? proc-or-keymap)))
       (error "keymap: Attempt to bind to a non-procedure/keymap")
-      (hashq-set! (mappings keymap) key proc-or-keymap)))
+      (hashq-set!
+       (mappings keymap) key
+       (if (procedure? proc-or-keymap)
+           (lambda (get-key . args) (apply proc-or-keymap args))
+           proc-or-keymap))))
+
+(define-public (bind-intermediate-key! keymap key proc)
+  (if (not (procedure? proc))
+      (error "keymap: Attempt to bind to a non-procedure")
+      (hashq-set! (mappings keymap) key proc)))
 
 (define-public (unbind-key! keymap key)
   (hashq-remove! (mappings keymap) key))
@@ -53,25 +63,80 @@
   (syntax-rules ()
     ((_ mapping ...)
      (let ((km (make-keymap)))
-       (make-mapping km mapping) ... km))
-    ((_ mapping ...)
-     (let ((km (make-keymap)))
        (make-mapping km mapping) ... km))))
 
 (define-syntax make-mapping
-  (syntax-rules (=> :)
+  (syntax-rules (=> ==>)
+    ((_ km ((k ==> args ...) stmt ...))
+     (bind-intermediate-key! km (quasiquote k) (lambda (args ...) stmt ...)))
     ((_ km ((k args ...) stmt ...))
      (bind-key! km (quasiquote k) (lambda (args ...) stmt ...)))
     ((_ km (k => proc))
      (bind-key! km (quasiquote k) (lambda args (apply proc args))))
-    ((_ km (k : nkm))
-     (bind-key! km (quasiquote k) nkm))))
+    ((_ km k ==> proc)
+     (bind-intermediate-key! km (quasiquote k) proc))))
 
 (define-public (keymap-lookup keymap key-provider . args)
   (let* ((key (key-provider))
          (val (hashq-ref (mappings keymap) key)))
-    (let ((result
-           (cond ((keymap? val) (apply keymap-lookup val key-provider args))
-                 ((procedure? val) (lambda () (apply val args)))
-                 (else (lambda () (apply (default keymap) key args))))))
-      result)))
+    (if val
+        (lambda () (apply val key-provider args))
+        (lambda () (apply (default keymap) key args)))))
+
+(define-public (do-keymap keymap key-provider . args)
+  ((apply keymap-lookup keymap key-provider args)))
+
+(define-public (cancel-keymap state . args) (apply values 'cancel args))
+(define-public (confirm-keymap state . args) (apply values 'confirm args))
+(define-public (continue-keymap state . args) (apply values 'continue args))
+(define-public (do-prompt-keymap
+         keymap get-key on-continue on-confirm on-cancel . args)
+  (apply on-continue args)
+  (let lp ((state 'continue) (args args))
+    (call-with-values (apply keymap-lookup keymap get-key state args)
+       (lambda (new-state . new-args)
+         (case new-state
+          ((continue) (apply on-continue new-args) (lp new-state new-args))
+          ((cancel) (apply on-cancel new-args))
+          ((confirm) (apply on-confirm new-args)))))))
+
+(define-syntax create-prompt-keymap
+  (syntax-rules ()
+    ((_ mapping ...)
+     (let ((km (make-keymap)))
+       (make-prompt-mapping km mapping) ...
+       (bind-key! km 'escape cancel-keymap)
+       (bind-key! km 'C-g cancel-keymap)
+       (bind-key! km 'return confirm-keymap)
+       km))))
+
+(define-syntax define-prompt-keymap
+  (syntax-rules ()
+    ((_ name mapping ...)
+     (define name (create-prompt-keymap mapping ...)))))
+
+(define-syntax make-prompt-mapping
+  (syntax-rules (=> ==>)
+    ((_ km ((k ==> args ...) stmt ...))
+     (make-mapping km ((k ==> args ...) stmt ...)))
+    ((_ km ((k args ...) stmt ...))
+     (bind-key! km (quasiquote k)
+                (lambda (state args ...)
+                  (call-with-values (lambda () stmt ...)
+                    (lambda vals
+                      (apply continue-keymap state vals))))))
+    ((_ km (k => proc))
+     (bind-key! km (quasiquote k)
+                (lambda (state . args)
+                  (call-with-values
+                      (lambda () (apply proc args))
+                    (lambda vals (apply continue-keymap state vals))))))
+    ((_ km k ==> proc)
+     (make-mapping km k ==> proc))))
+
+(define-public (prompt-keymap-with-default keymap default)
+  (make-keymap-inner
+   (mappings keymap)
+   (lambda (key state . args)
+     (call-with-values (lambda () (apply default key args))
+       (lambda vals (apply continue-keymap state vals))))))

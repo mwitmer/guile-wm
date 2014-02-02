@@ -42,18 +42,9 @@
 (define-public root-key (make-procedure-with-setter root-key-ref root-key-set!))
 
 (define (run-keymap get)
-  (define keymap
-    (keymap-with-default
-     root-keymap
-     (lambda (d) (message (format #f "Unknown key: ~a" d)))))
-  (grab-pointer #t target-win '() 'async 'async (xcb-none xwindow) 
-                (or keymap-cursor-val (xcb-none xcursor)) 0)
-  (grab-keyboard #f target-win 0 'async 'async)
-  (let ((action (keymap-lookup keymap get)))
-    (ungrab-pointer 0)
-    (ungrab-keyboard 0)
-    (unmap-window message-window)
-    action))
+  (define (default d) (message (format #f "Unknown key: ~a" d)))
+  (define keymap (keymap-with-default root-keymap default))
+  (do-keymap keymap get))
 
 (define-keymap-once root-keymap)
 (define-once target-win #f)
@@ -73,17 +64,14 @@ keymap while minibuffers, menus, and so on are active."
          (root-keymap-enabled? #t)
          result)))))
 
-(define (get-next-key get)
+(define (get-next-key get-now get-later)
   (define (process-root-key key)
     (if (and (eq? key (root-key)) (root-keymap-enabled?))
-        (let ((action (run-keymap get)))
-          (get process-root-key)
-          (action))
-        (get process-root-key)))
-  (get process-root-key))
+        (run-keymap get-now))
+    (get-later process-root-key))
+  (get-later process-root-key))
 
-(define-command (set-root-key! (key #:symbol))
-  (set! (root-key) key))
+(define-command (set-root-key! (key #:symbol)) (set! (root-key) key))
 
 (define-public keymap-cursor
   (make-procedure-with-setter
@@ -94,4 +82,15 @@ keymap while minibuffers, menus, and so on are active."
  (lambda ()
    (set! target-win (current-root))
    (set! (root-key) root-key-val)
-   (get-next-key (keystroke-listen! target-win))))
+   (let* ((key-listener (keystroke-listen! target-win))
+          (get-key-now
+           (lambda ()
+             (grab-pointer #t target-win '() 'async 'async (xcb-none xwindow)
+                           (or keymap-cursor-val (xcb-none xcursor)) 0)
+             (grab-keyboard #f target-win 0 'async 'async)
+             (let ((key (key-listener)))
+               (ungrab-pointer 0)
+               (ungrab-keyboard 0)
+               key)))
+          (get-key-later (lambda (proc) (key-listener proc))))
+     (get-next-key get-key-now get-key-later))))

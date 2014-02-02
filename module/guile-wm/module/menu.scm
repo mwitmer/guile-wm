@@ -29,48 +29,25 @@
   #:use-module (xcb xml xproto)
   #:export (menu menu-keymap (font-string . menu-font)))
 
+(use-wm-modules message)
+
 (define font-string "fixed")
 
-(define-public (menu-cancel state row-count row) (values 'cancel row-count row))
-(define-public (menu-execute state row-count row) (values 'execute row-count row))
-(define-public (menu-point-down state row-count row)
-  (values state row-count (min (+ row 1) (- row-count 1))))
-(define-public (menu-point-up state row-count row)
-  (values state row-count (max 0 (- row 1))))
-(define-public (menu-point-circulate state row-count row)
-  (values state row-count (if (= (+ row 1) row-count) 0 (+ row 1))))
+(define-public (menu-point-down row-count row)
+  (values row-count (min (+ row 1) (- row-count 1))))
+(define-public (menu-point-up row-count row)
+  (values row-count (max 0 (- row 1))))
+(define-public (menu-point-circulate row-count row)
+  (values row-count (if (= (+ row 1) row-count) 0 (+ row 1))))
 
-(define-keymap menu-keymap
-  (C-g         => menu-cancel)
-  (escape      => menu-cancel)
+(define-prompt-keymap menu-keymap
   (C-n         => menu-point-down)
   (down        => menu-point-down)
   (tab         => menu-point-circulate)
   (C-p         => menu-point-up)
-  (up          => menu-point-up)
-  (return      => menu-execute))
+  (up          => menu-point-up))
 
-(define menu-active? (make-parameter #f))
 (define-once menu-window #f)
-
-(define (run-keymap get put prompt choice-alist action default)
-  (define choice-vlist (list->vlist (map car choice-alist)))
-  (define keymap (keymap-with-default menu-keymap keymap-ignore))
-  (define (loop state row-count row)
-    (put (vlist-cons prompt choice-vlist) (+ 1 row))
-    (process (keymap-lookup keymap get state row-count row)))
-  (define ((finish row) state)
-    (case state 
-      ((execute) (action (cdr (list-ref choice-alist row))))
-      ((cancel) (if default (action default)))))
-  (define (process get-data)
-    (call-with-values get-data
-      (lambda (state row-count row)
-        (case state
-          ((select) (loop state row-count row))
-          (else => (finish row))))))
-  (with-root-keymap-disabled
-   (loop 'select (vlist-length choice-vlist) 0)))
 
 (define (prepare-text lines row)
   (define with-highlight
@@ -82,15 +59,27 @@
   (string-join (vlist->list with-highlight) "\n"))
 
 (define* (menu prompt choice-alist action #:optional default)
-  (define (run-menu)
-    (define get-next-key (keystroke-listen! menu-window))
-    (define (update-text text row)
-      (put-text (prepare-text text row) menu-window 'white 'black font-string))
-    (map-window menu-window)
-    (configure-window menu-window #:stack-mode 'above)
-    (run-keymap get-next-key update-text prompt choice-alist action default)
-    (unmap-window menu-window))
-  (if (not (menu-active?)) (parameterize ((menu-active? #t)) (run-menu))))
+  (define (continue-menu row-count row)
+    (define text (vlist-cons prompt choice-vlist))
+    (put-text (prepare-text text (+ 1 row))
+              menu-window 'white 'black font-string))
+  (define (confirm-menu row-count row)
+    (unmap-window menu-window)
+    (action (cdr (list-ref choice-alist row))))
+  (define (cancel-menu row-count row)
+    (unmap-window menu-window)
+    (if default (action default)))
+  (define choice-vlist (list->vlist (map car choice-alist)))
+  (unmap-window message-window)
+  (configure-window menu-window #:stack-mode 'above)
+  (map-window menu-window)
+  (with-root-keymap-disabled
+   (do-prompt-keymap
+    (prompt-keymap-with-default
+     menu-keymap (lambda (key row-num row) (values row-num row)))
+    (keystroke-listen! menu-window)
+    continue-menu confirm-menu cancel-menu
+    (vlist-length choice-vlist) 0)))
 
 (wm-init
  (lambda () (set! menu-window (fixed-window-create 0 0 200 20 0))))

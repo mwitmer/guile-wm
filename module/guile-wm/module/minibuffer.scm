@@ -35,13 +35,7 @@
 
 (define font-string "fixed")
 
-(define-public (keymap-cancel data) (set-data-state data 'cancel))
-(define-public (keymap-execute data) (set-data-state data 'execute))
-
-(define-keymap minibuffer-keymap
-  (C-g         => keymap-cancel)
-  (escape      => keymap-cancel)
-  (return      => keymap-execute)
+(define-prompt-keymap minibuffer-keymap
   (left        => point-left)
   (C-b         => point-left)
   (right       => point-right)
@@ -60,30 +54,6 @@
   (up          => point-up)
   (C-j         => insert-newline)
   (C-k         => kill-to-end-of-line))
-
-(define (run-keymap get put prompt action)
-  (define keymap (keymap-with-default minibuffer-keymap default))
-  (define (default key data)
-    (or (and=> (sym->printable key) (lambda (p) (point-insert data p))) data))
-  (define (loop data) 
-    (prepare-and-put data)
-    (process (keymap-lookup keymap get data)))
-  (define (prepare-and-put data)
-    (let ((x (car (data-point data))) (y (cdr (data-point data)))
-          (first-line (string-append prompt (vlist-head (data-text data)))))
-      (put (vlist-cons first-line (vlist-tail (data-text data)))
-           (cons (if (= y 0) (+ x (string-length prompt)) x) y))))
-  (define ((finish data) state)
-    (define command (string-join (vlist->list (data-text data))))
-    (case state
-      ((execute) (if action (action command) command))
-      ((cancel) (log! "Minibuffer cancelled.") *unspecified*)))
-  (define (process get-data)
-    (define data (get-data))
-    (case (data-state data)
-      ((read) (loop data))
-      (else => (finish data))))
-  (with-root-keymap-disabled (loop (empty-text-edit-data 'read))))
 
 (define (prepare-text unescaped-lines point)
   (define row (cdr point))
@@ -120,19 +90,32 @@
    "\n"))
 
 (define* (minibuffer prompt #:optional action)
-  (define (run-minibuffer)
-    (define get-next-key
-      (keystroke-listen! minibuffer-window))
-    (define (update-text text point)
-      (put-text
-       (prepare-text text point) minibuffer-window 'white 'black font-string))
-    (map-window minibuffer-window)
-    (configure-window minibuffer-window #:stack-mode 'above #:height 10 #:width 10)
-    (let ((result (run-keymap get-next-key update-text prompt action)))
-      (unmap-window minibuffer-window)
-      result))
-  (if (not (minibuffer-active?))
-      (parameterize ((minibuffer-active? #t)) (run-minibuffer))))
+  (define (put text point)
+    (put-text
+     (prepare-text text point) minibuffer-window 'white 'black font-string))
+  (define (continue-minibuffer data)
+    (let ((x (car (data-point data))) (y (cdr (data-point data)))
+          (first-line (string-append prompt (vlist-head (data-text data)))))
+      (put (vlist-cons first-line (vlist-tail (data-text data)))
+           (cons (if (= y 0) (+ x (string-length prompt)) x) y))))
+  (define (confirm-minibuffer data)
+    (define str (string-join (vlist->list (data-text data)) "\n"))
+    (unmap-window minibuffer-window)
+    (if action (action str) str))
+  (define (cancel-minibuffer data)
+    (unmap-window minibuffer-window)
+    (message "Minibuffer cancelled") *unspecified*)
+  (hide-message)
+  (configure-window minibuffer-window #:stack-mode 'above #:height 10 #:width 10)
+  (map-window minibuffer-window)
+  (with-root-keymap-disabled
+   (do-prompt-keymap
+    (prompt-keymap-with-default
+     minibuffer-keymap
+     (lambda (key data) (point-insert data (sym->printable key))))
+    (keystroke-listen! minibuffer-window)
+    continue-minibuffer confirm-minibuffer cancel-minibuffer
+    (empty-text-edit-data))))
 
 (define (get-additional-arg arg-name type)
   (minibuffer (format #f "~a [~a]: " arg-name (keyword->symbol type))))
@@ -141,12 +124,12 @@
   (minibuffer "eval: " (lambda (cmd) (message (format #f "~a" (wm-eval cmd))))))
 
 (define-command (prompt-for-command)
-  (run-command (minibuffer "command: ") get-additional-arg))
+  (define cmd (minibuffer "command: "))
+  (if (not (unspecified? cmd)) (run-command cmd get-additional-arg)))
 
 (define-command (prompt-for-shell-command)
   (minibuffer "/usr/bin/sh -c: " shell-command))
 
-(define minibuffer-active? (make-parameter #f))
 (define-once minibuffer-window #f)
 
 (wm-init
