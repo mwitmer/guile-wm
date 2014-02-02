@@ -20,10 +20,9 @@
                 #:select (unmap-window map-window get-geometry configure-window
                                        destroy-notify-event allow-events
                                        change-window-attributes
-                                       button-press-event
+                                       button-press-event unmap-notify-event
                                        get-window-attributes))
-  #:export (blank-x-window
-            selected-tile))
+  #:export (blank-x-window selected-tile))
 
 ;;; Commentary:
 ;; This is a tiling window manager for guile-wm. It provides support
@@ -72,9 +71,6 @@
 ;; This is the transparent x window that gets displayed when an empty
 ;; tile is selected
 (define-once blank-x-window #f)
-;; This is the most recent x window to be hidden, for use by the
-;; restore-window command
-(define-once most-recent-x-window #f)
 ;; This is the tile that's currently selected
 (define-once selected-tile #f)
 ;; This is the master list of frames
@@ -167,7 +163,8 @@
                                  (lp-frame (cdr frames))))
                 ((split? el) (or (lp-win (split-element1 el))
                                  (lp-win (split-element2 el))))
-                ((tile? el) (if (xid= (tile-window el) x-window)
+                ((tile? el) (if (and (tile-window el)
+                                     (xid= (tile-window el) x-window))
                                 el #f)))))))
 
 ;; Location of tiles relative to one another
@@ -255,27 +252,28 @@
 
 (define (move-x-window! x-window tile)
   (set-tile-window! tile x-window)
-  (if (and (eq? selected-tile tile)
-           (not (xid= x-window blank-x-window)))
+  (if (and (eq? selected-tile tile) (not (xid= x-window blank-x-window)))
       (unmap-window blank-x-window))
   (fit-x-window! x-window tile)
   (discard-hidden-x-window! x-window)
-  (when (and most-recent-x-window (xid= x-window most-recent-x-window))
-    (if (q-empty? hidden-x-windows)
-        (set! most-recent-x-window #f)
-        (set! most-recent-x-window (last (car hidden-x-windows))))))
+  (if (not (xid= blank-x-window x-window))
+   (set-window-state! (window-child x-window) window-state-normal)))
 
 (define (fit-x-window! x-window tile)
   (define geom (reply-for get-geometry x-window))
   (define hints (window-size-hints x-window))
-  (define height-inc (xref hints 'height-inc))
-  (define width-inc (xref hints 'width-inc))
   (define target-height (- (tile-height tile) (* (xref geom 'border-width) 2)))
   (define target-width (- (tile-width tile) (* (xref geom 'border-width) 2)))
-  (define height (if (= height-inc 0) target-height
-                     (* height-inc (quotient target-height height-inc))))
-  (define width (if (= width-inc 0) target-width
-                    (* width-inc (quotient target-width width-inc))))
+  (define (calculate-height)
+    (define height-inc (xref hints 'height-inc))
+    (if (= height-inc 0) target-height
+        (* height-inc (quotient target-height height-inc))))
+  (define (calculate-width)
+    (define width-inc (xref hints 'width-inc))
+    (if (= width-inc 0) target-width
+        (* width-inc (quotient target-width width-inc))))
+  (define height (if hints (calculate-height) target-height))
+  (define width (if hints (calculate-width) target-width))
   (unmap-window x-window)
   (configure-window x-window
     #:x (calculate-x tile) #:y (calculate-y tile))
@@ -338,12 +336,17 @@
 
 ;; Managing hidden x windows
 
+(define (most-recent-x-window)
+  (if (cdr hidden-x-windows)
+      (last (car hidden-x-windows))
+      #f))
+
 (define (hide-x-window! x-window)
-  (unmap-window x-window)
   (when (not (xid= x-window blank-x-window))
+    (set-window-state! (window-child x-window) window-state-iconic)
     (when (not (memq x-window (car hidden-x-windows)))
-      (set! most-recent-x-window x-window)
-      (enq! hidden-x-windows x-window))))
+      (enq! hidden-x-windows x-window)))
+  (unmap-window x-window))
 
 (define (pop-and-unhide-x-window! tile)
   (when (not (q-empty? hidden-x-windows))
@@ -379,14 +382,14 @@
   (let ((parent (on-map map-request)))
     (move-x-window! parent selected-tile)
     (select-tile selected-tile)
-    (create-listener (stop!)
-      ((destroy-notify-event destroy-notify #:window parent)
+    (add-wm-hook!
+     unmap-notify-hook
+     (lambda (event parent)
        (discard-hidden-x-window! parent)
        (when (and (tile-window selected-tile)
                   (xid= (tile-window selected-tile) parent))
          (set-tile-window! selected-tile #f)
-         (restore-window))
-       (stop!)))))
+         (restore-window))))))
 
 (define (tiling-on-configure configure-request)
   (on-configure configure-request))
@@ -570,10 +573,10 @@
   (select-tile selected-tile))
 
 (define-command (restore-window)
-  (define most-recent most-recent-x-window)
+  (define most-recent (most-recent-x-window))
   (cond
    (most-recent
-    (discard-hidden-x-window! most-recent-x-window)
+    (discard-hidden-x-window! most-recent)
     (if (not (tile-empty? selected-tile))
         (hide-x-window! (tile-window selected-tile)))
     (move-x-window! most-recent selected-tile)
