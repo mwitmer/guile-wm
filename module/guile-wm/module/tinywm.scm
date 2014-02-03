@@ -39,8 +39,8 @@
           #:x (box (xref point 'root-x) (xref geom 'width) (screen-width))
           #:y (box (xref point 'root-y) (xref geom 'height) (screen-height)))
         (configure-window (win)
-          #:width (- (xref point 'root-x) (xref geom 'x))
-          #:height (- (xref point 'root-y) (xref geom 'y))))))
+          #:width (max 1 (- (xref point 'root-x) (xref geom 'x)))
+          #:height (max 1 (- (xref point 'root-y) (xref geom 'y)))))))
 
 (define (on-button-release button-release)
   (ungrab-pointer xcb-current-time)
