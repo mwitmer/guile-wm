@@ -112,7 +112,9 @@
    (do-prompt-keymap
     (prompt-keymap-with-default
      minibuffer-keymap
-     (lambda (key data) (point-insert data (sym->printable key))))
+     (lambda (key data)
+       (or (and=> (sym->printable key) (lambda (p) (point-insert data p)))
+           data)))
     (keystroke-listen! minibuffer-window)
     continue-minibuffer confirm-minibuffer cancel-minibuffer
     (empty-text-edit-data))))
