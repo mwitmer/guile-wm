@@ -142,7 +142,7 @@ them in special lines of comments prefixed with @code{wm-modules:}:
 ;; File: $HOME/.guile-wm
 
 ;; wm-modules: cursor root-keymap
-;; wm-modules: repl randr fullscreen 
+;; wm-modules: repl randr fullscreen
 ;; wm-modules: menu message window-menu time simple-reparent
 ;; wm-modules: simple-focus window-cycle
 
@@ -300,58 +300,65 @@ actually respond to key-down events.
 @subsection Keymaps
 
 Keymaps are a flexible tool for binding input to behavior. At their
-core is a mapping from input values to procedures or additional
-keymaps.
+core is a mapping from input values to procedures, referred to here as
+key handlers.
 
 Keymap support is located in @code{(guile-wm keymap)}
 
 @deffn{Scheme Syntax} create-keymap mapping ...
-
 Create a new keymap. Each @var{mapping} is a mapping from a key to a
-procedure or another keymap. @var{args} is a keyword argument list
-explained below. There are three forms available for defining
-mappings:
+key handler. There are four forms available for mappings.
+
+The first two forms map a key to a procedure that takes the rest
+arguments provided to @code{keymap-lookup}:
 
 @code{((k args ...) exp ...)}
 
-Maps key @var{k} to a procedure consisting of expressions @var{exp}
+Maps key @var{k} to a handler consisting of expressions @var{exp}
 ... and args @var{args}.
 
 @code{(k => proc)}
 
-Maps key @var{k} to procedure @var{proc}
+Maps key @var{k} to handler @var{proc}
 
-@code{(k : keymap)}
+The other two forms map a key to a procedure that takes the
+@code{key-provider} procedure as well as the rest arguments provided
+to @code{keymap-lookup}. This allows the handler to start a subsidiary
+keymap that receives keys from the same source as the primary keymap.
 
-Maps key @var{k} to keymap @var{keymap}
+@code{(k ==> proc)}
 
-In all three forms, @var{k} is evaluted inside of @code{quasiquote},
-so an expression that evaluates to some literal can be provided if
-it is unquoted.
+Maps key @var{k} to procedure @var{proc}.
 
-The values passed to keymap procedures are taken from the rest
-arguments provided to @code{keymap-lookup}.
+@code{((k ==> args) stmt ...)}
+
+Maps key @var{k} to a procedure with args @var{args} ... and body
+@var{stmt} ... .
+
+In all four forms, @var{k} is evaluted inside of @code{quasiquote}, so
+an expression that evaluates to some literal can be provided if it is
+unquoted.
+
 @end deffn
 
 @deffn{Scheme Procedure} keymap-lookup keymap key-provider . args
 Reads a key by calling thunk @var{key-provider} and returns another
-thunk to call the procedure the key is bound to, if one exists. If
-@var{key} is bound to another keymap, @code{keymap-lookup} will be
-called recursively on nested keymaps until a procedure results.
+thunk to call the procedure the key is bound to, if one exists.
 
 This procedure returns a thunk so that the caller can perform any
 desired actions (hide a menu, signal something to the user, etc.)
 prior to acutally invoking the keymap's behavior.
 
-@var{args} will be passed to the bound procedure. Passing additional
-data to a keymap in this fashion can be used to create functional
-state machines; see @code{(guile-wm module menu)} and @code{(guile-wm
-module minibuffer)} for examples. If no rest arguments are provided,
-the procedures in the keymap should take no arguments.
+@var{args} will be passed to the matched key handler.
 
 Ordinarily, @var{key-provider} returns key symbols, but that is not a
 requirement. Keymaps can run on anything that can be differentiated by
 @code{eq?}.
+@end deffn
+
+@deffn{Scheme Procedure} do-keymap keymap key-provider . args
+Call @code{keymap-lookup} with the provided arguments and then
+immediately evaluate the result.
 @end deffn
 
 @deffn{Scheme Syntax} define-keymap name mapping ...
@@ -363,8 +370,16 @@ Define a keymap that will not be redefined if the module it is in gets
 recompiled.
 @end deffn
 
-@deffn{Scheme Procedure} bind-key! keymap key proc-or-keymap
-Bind @var{key} to procedure or keymap @var{proc-or-keymap} in @var{keymap}.
+@deffn{Scheme Procedure} bind-key! keymap key proc
+Bind @var{key} to handler @var{proc} in @var{keymap}. @var{proc} will
+be called with the rest arguments provided to @code{keymap-lookup} as
+its arguments.
+@end deffn
+
+@deffn{Scheme Procedure} bind-intermediate-key! keymap key proc
+Bind @var{key} to handler @var{proc} in @var{keymap}. @var{proc} will
+be called with the @var{key-provider} and rest arguments provided to
+@code{keymap-lookup} as its arguments.
 @end deffn
 
 @deffn{Scheme Procedure} unbind-key! keymap key
@@ -390,6 +405,132 @@ Ignore the key and return the additional arguments as values,
 unchanged. This procedure can be used with @code{keymap-with-default}
 to create a keymap that ignores unknown keys.
 @end deffn
+
+@subsubsection Prompt Keymaps
+
+A common use case for a keymap is to run some kind of stateful
+operation, such as a text editing buffer or menu. These operations can
+often be modelled with a ``continue-cancel-confirm'' sequence. For
+example, in a menu, pressing @code{up} or @code{down} moves the
+selection and continues the keymap. Pressing @code{escape} will cancel
+the keymap, and pressing @code{enter} confirms it.
+
+Since this model occurs frequently, Guile-WM includes special
+procedures and syntax for creating and running ``prompt'' keymaps.
+These keymaps run in a tail-recursive loop, taking the output from one
+iteration and passing it in as the input to the next iteration. A
+state variable (@code{continue}, @code{confirm}, or @code{cancel} is
+passed along transparently.
+
+@deffn{Scheme Syntax} create-prompt-keymap mapping ...
+
+Create a prompt keymap with mappings @var{mapping} ... .  In addition
+to the mappings specified, @code{escape} and @code{C-g} will
+automatically be bound to @code{cancel-keymap}, and @code{return} will
+be bound to @code{confirm-keymap}.
+
+Syntax for mappings remains the same as in
+@code{create-keymap}. However, handlers bound using @code{==>} now
+must accept one additional argument that provides the state of the
+keymap after @code{key-provider} and before the other arguments.
+
+Because these keymaps are stateful, handlers must return the values
+that will be passed back into the keymap on its next iteration.  For
+example, in a text buffer editor, a handler will receive arguments
+describing the state of the text editor, and should return a set of
+values of the same length describing the state of the text editor
+after the operation corresponding to the key pressed has been
+performed.
+
+Handlers bound with @code{==>} must return the state variable before
+the other values, but do not need to return @code{key-provider}.  The
+state returned should be one of the symbols @code{cancel},
+@code{confirm}, or @code{continue}.
+
+In summary, a handler bound with @code{==>} is called and returns
+values in this manner:
+
+@samp{(handler keymap-lookup state arg ...) -> (values new-state new-arg ...)} 
+
+Other handlers are called like this:
+
+@samp{(handler arg ...) -> (values new-arg ...)}
+
+These handlers automatically have @code{continue} appended to their
+return values.
+@end deffn
+
+Note that @code{bind-key!} and @code{bind-intermediate-key!} can be
+used with prompt keymaps, but they must explicitly include the state
+argument in their list of arguments.
+
+@deffn{Scheme Syntax} define-prompt-keymap name mapping ...
+Create a prompt keymap with name @var{name} and mappings @var{mapping} ... .
+@end deffn
+
+@deffn{Scheme Procedure} do-prompt-keymap keymap get-key on-continue on-cancel . args
+
+Run prompt keymap @var{keymap} with initial arguments @var{args} by
+getting keys using @var{get-key}. When a handler returns
+@code{(values 'continue ...)}, @var{on-continue} will be called with the other
+values returned by the handler as its arguments. The keymap will then
+run again, with those values as its new arguments.
+
+When a handler returns @code{(values 'cancel ...)}, @var{on-cancel}
+will be called with the other values returned by the handler as its
+arguments. Likewise, when @code{(values 'confirm ...)} is returned,
+@var{on-confirm} is called before the keymap ends. In both cases, the
+keymap will then terminate.
+@end deffn
+
+@deffn{Scheme Procedure} prompt-keymap-with-default keymap default
+Returns a new keymap copied from @var{keymap} with @var{default} as
+the handler for unknown keys. @var{default} should take the unknown
+key as an argument and then the other arguments, and will
+automatically continue the keymap.
+@end deffn
+
+@deffn{Scheme Procedure} cancel-keymap state . args
+Cancel the prompt keymap by returning @code{(values 'cancel args ...)}
+@end deffn
+
+@deffn{Scheme Procedure} confirm-keymap state . args
+Confirm the prompt keymap by returning @code{(values 'confirm args ...)}
+@end deffn
+
+@deffn{Scheme Procedure} continue-keymap state . args
+Continue the prompt keymap by returning @code{(values 'continue args ...)}
+@end deffn
+
+These keymaps are complicated to explain, but simple to use. Here is a
+volume selector implemented using prompt keymaps and the @code{amixer}
+shell command:
+
+@lisp
+(define (get-volume)
+  (string->number
+   (match:substring
+    (string-match 
+     "\\[([0-9][0-9]?[0-9]?)%\\]"
+     (shell-command-output "amixer sget Master")) 1)))
+
+(define-prompt-keymap volume-adjust-keymap
+  ((less-than quantity) (max 0 (- quantity 5))) ;; state hidden syntax
+  ((greater-than ==> get-key state quantity) ;; ==> syntax
+    (values 'continue (min 100 (+ quantity 5))))
+
+(bind-intermediate-key!
+ root-keymap 'V
+ (lambda (get-key)
+   (do-prompt-keymap
+    quantity-adjust-keymap get-key
+    (lambda (volume) (percent-display volume "Volume:"))
+    (lambda (volume)
+      (shell-command (format #f "amixer sset Master ~a%" volume))
+      (message (format #f "Volume set to ~a%" volume)))
+    (lambda (volume) (message "Volume change cancelled"))
+    (get-volume))))
+@end lisp
 
 @node Drawing
 @section Drawing
@@ -449,6 +590,11 @@ will always grab the keyboard input when visible.
 Use this procedure to create window manager overlays such as the
 message display, minibuffer, or menu.
 @end deffn
+
+@deffn{Scheme Procedure} fixed-window? win
+Returns @code{#t} if XID @var{win} is a fixed window. This procedure
+can be used to prevent dragging or resizing fixed windows.
+@end deffn
 @node Commands
 @section Commands
 
@@ -467,7 +613,7 @@ select commands. @xref{Minibuffer}, or @ref{Root Keymap}.
 The following definitions are found in @code{(guile-wm command)}:
 
 @deffn{Scheme Syntax} define-command (name (arg type) ...) stmt ...
-@deffnx{Scheme Syntax} define-command (name arg type) stmt ...  
+@deffnx{Scheme Syntax} define-command (name arg type) stmt ...
 Define a new command named @var{name}. It creates and exports a
 procedure with arguments @var{arg} ... and body @var{stmt} ...;
 @var{type} for each @var{arg} should be one of the following:
@@ -503,12 +649,18 @@ Quit the window manager and close the connection to the X
 server. Replaces the core binding of the same name.
 @end deffn
 
-@deffn{Command} shell-command commands #:string 
+@deffn{Command} shell-command commands #:string
 Concatenate @var{commands} into a single string and execute the result
 in a detached process.
 @end deffn
 
-@deffn{Command} wm-eval (exp #:string) 
+@deffn{Command} shell-command-output commands #:string
+Concatenate @var{commands} into a single string and execute the result
+in a process; wait for the command to terminate and return a string
+containing its output
+@end deffn
+
+@deffn{Command} wm-eval (exp #:string)
 Evaluate S-expression @var{exp} in the window manager's current
  environment.
 @end deffn
@@ -532,7 +684,7 @@ Guile-WM provides support for redirecting requests and reparenting
 windows in modules @code{(guile-wm redirect)} and @code{(guile-wm
 reparent)}, respectively.
 
-@deffn{Scheme Procedure} wm-reparent-window child parent x y 
+@deffn{Scheme Procedure} wm-reparent-window child parent x y
 Reparent @var{child} inside of @var{parent} at coordinates (@var{x},
 @var{y}), and sets up event handlers to manage the lifecycle of the
 parent window so that it is destroyed when the child window is
@@ -554,25 +706,48 @@ Begin redirecting @code{map-request}, @code{configure-request}, and
 Stop redirecting requests on the root window.
 @end deffn
 
-An example of a simple form of reparenting can be found in these
-procedures from @code{(guile-wm reparent)}:
+Guile-WM can be configured to automatically reparent new windows with
+the following method:
 
-@deffn{Scheme Procedure} on-map map-request
-Reparent the child window that initiated the map request in the upper
-left corner of a parent window with a two pixel wide border and no
-background, and then map both windows.
+@deffn{Scheme Procedure} begin-reparent-redirect! create-parent
+              child-x child-y allow-configure? allow-circulate?
+
+Begin redirecting client map, configure, and circulate requests. When
+a map request for a new window arrives from another application, that
+window is reparented inside a parent window at coordinates
+(@var{child-x}, @var{child-y}) created by calling thunk
+@var{create-parent}. @var{allow-configure?}  and
+@var{allow-circulate?} specify whether configure and circulate
+requests should be passed along unmodified or ignored. Ignored
+requests can still be handled by procedures added to
+@code{configure-request-hook} and @code{circulate-request-hook}.
 @end deffn
 
-@deffn{Scheme Procedure} on-configure configure-request
-Allow the configure request through with no modification
+The following hooks are run when requests come from client windows:
+
+@deffn{WM Hook} after-reparent-hook
+Called after a child window has been reparented inside a parent and
+mapped. If this hooks is empty, the parent window will be mapped
+automatically and the child window will be given the focus. Its two
+arguments are the XID of the child window and the XID of the parent
+window.
 @end deffn
 
-@deffn{Scheme Procedure} on-circulate circulate-request
-Ignore the circulate request
+@deffn{WM Hook} unmap-notify-hook
+Called when another application unmaps a reparented window. If this
+hook is empty, the parent window will be unmapped. Its two arguments
+are the unmap-notify event, and the XID of the parent window.
 @end deffn
 
-WM modules may use these procedures or write more elaborate ones as
-needed.
+@deffn{WM Hook} configure-request-hook
+Called when a configure request is received. The request is its
+single argument.
+@end deffn
+
+@deffn{WM Hook} circulate-request-hook
+Called when a circulate request is received. The request is its
+single argument.
+@end deffn
 
 @node Text
 @section Text
@@ -597,7 +772,7 @@ have its own font rendering library (yet).
 
 Text display functions are in @code{(guile-wm text)}:
 
-@deffn{Scheme Procedure} put-text text win fg bg font-string 
+@deffn{Scheme Procedure} put-text text win fg bg font-string
 Render escaped text string @var{text} in X window @var{win}, which is
 resized to fit the text with two pixels of padding all
 around. @var{fg} is the desired foreground color, and @var{bg} is the
@@ -635,9 +810,9 @@ accomplished by placing the sequence @code{\n} in the string.
 
 The module @code{(guile-wm text-edit)} exports a number of procedures
 that can be used to edit a text buffer. These procedures all use a
-record type called @code{text-edit-data}, which has three fields---the
+record type called @code{text-edit-data}, which has two fields---the
 text stored in the buffer, the location of the cursor or point in the
-buffer, and the state of the editor.
+buffer.
 
 The text is stored in a vlist of strings, with each string
 representing one line. @inforef{Vlists,
@@ -646,30 +821,19 @@ Vlists, guile}.
 Point is a pair of integers, @code{(x . y)}, where x is the column of
 point and y is the row.
 
-The content of the state property should be set and used by the user
-interface code driving the text editor. It can, for example, be a
-symbol that describes if the editor is still in use or if it has
-finished or cancelled (eg. @code{read}, @code{finish}, or
-@code{cancel}).
-
 Text editor state is an @emph{immutable} data structure---procedures
 that set its properties actually return a new copy of the data
 structure with the old property value replaced by the new
 one. @inforef{SRFI-9 Records, Functional ``Setters'', guile}.
 
-@deffn{Scheme Procedure} make-text-edit-data state point text
-Create a new text edit data structure with state @var{state}, point
-@var{point}, and text buffer @var{text}.
+@deffn{Scheme Procedure} make-text-edit-data point text
+Create a new text edit data structure with point @var{point} and text
+buffer @var{text}.
 @end deffn
 
-@deffn{Scheme Procedure} blank-text-edit-data state
-Create a new text edit data structure with an empty buffer, point at
-(0, 0), and state @var{state}.
-@end deffn
-
-@deffn{Scheme Procedure} data-state
-@deffnx{Scheme Procedure} set-data-state
-Getter and functional setter for the text edit data's state
+@deffn{Scheme Procedure} empty-text-edit-data
+Create a new text edit data structure with an empty buffer and point
+at (0, 0).
 @end deffn
 
 @deffn{Scheme Procedure} data-text
@@ -779,9 +943,8 @@ Define procedure @var{name}, which takes a record of type
 along with @var{args} ... as arguments @var{text}, @var{point-x}, and
 @var{point-y} and @var{args} ... to a procedure with body @var{stmt
 ...} . This procedure must return three values: the new text, the new
-point column, and the new pointer row. Those values are combined with
-the data's state into a new record of type @code{text-edit-data},
-which is then returned.
+point column, and the new pointer row. Those values are combined into
+a new record of type @code{text-edit-data}, which is then returned.
 @end deffn
 
 This syntax is simply a means of eliminating getter/setter
@@ -877,7 +1040,7 @@ pre-defined atoms can been viewed by evaluating the variable
 @code{atom}, defined in @code{(xcb xml xproto)}, at the repl.
 @end deffn
 
-@deffn{Scheme Procedure} request-window-property win atom 
+@deffn{Scheme Procedure} request-window-property win atom
 Send a request to the X server for the property of window @var{win}
 with name @var{atom}. @var{win} and @var{atom} should both be XIDs.
 Returns a cookie that can be used with @code{solicit} to block for the
@@ -900,7 +1063,7 @@ Returns the @code{type} property of the X reply
 @var{get-property-reply}; it will be the XID of an atom.
 @end deffn
 
-@deffn{Scheme Procedure} window-attributes wins 
+@deffn{Scheme Procedure} window-attributes wins
 Make a @code{get-window-attributes} request for all windows in list
 @var{wins}, and return the results in a list.
 @end deffn
@@ -916,12 +1079,53 @@ to ICCCM's definition of the term. (@code{map-state} is @code{viewable} and
 @code{override-redirect} is @code{#f})
 @end deffn
 
-@deffn{Scheme Procedure} window-hints win
+@deffn{Scheme Procedure} window-size-hints win
 Return the window's @code{WM_NORMAL_HINTS} property value. The
 result is an xcb structure which can be used in calls to @code{xref}
 and @code{xset!}. See the ICCCM standard for a list of its fields.
 @end deffn
 
+@deffn{Scheme Procedure} window-wm-hints win
+Return the window's @code{WM_HINTS} property value. The result is an
+xcb structure which can be used in calls to @code{xref} and
+@code{xset!}. See the ICCCM standard for a list of its fields.
+@end deffn
+
+Some client applications expect the window manager to keep track of
+their state. See the ICCCM standard for more details.
+
+@deffn{Scheme Procedure} window-state win
+Return the value of the @code{state} field in the window's
+@code{WM_STATE} property.
+@end deffn
+
+@deffn{Scheme Procedure} set-window-state! win state
+Set the value of the @code{state} field in the window's
+@code{WM_STATE} to @var{state}.
+@end deffn
+
+Window states are just integers, but some variables are defined to
+give them easily-identified names:
+
+@deffn{Scheme Variable} window-state-normal
+Value for the normal window state (@code{1}).
+@end deffn
+
+@deffn{Scheme Variable} window-state-withdrawn
+Value for the withdrawn window state (@code{0}).
+@end deffn
+
+@deffn{Scheme Variable} window-state-iconic
+Value for the iconic window state (@code{3}).
+@end deffn
+
+Other structured properties can be specified in an extension and
+retrieved with the following procedure:
+
+@deffn{Scheme Procedure} window-struct-property win struct atom
+Return the property of window @var{win} associated with atom
+@var{atom}, with structure specified by XCB struct @var{struct}.
+@end deffn
 @node Logging
 @section Logging
 
@@ -959,8 +1163,9 @@ If one module does require that another module or modules be initialized,
 it should import them with the syntax @code{use-wm-modules}.
 
 @deffn{Scheme Syntax} use-wm-modules m ...
-Import the modules @code{(guile-wm module @var{m})} ... and register
-them to initialize when Guile-WM connects to the X server.
+Import the modules @var{m} ... and register them to initialize when
+Guile-WM connects to the X server. If @var{m} is a symbol instead of a
+list, it is expanded into @code{(guile-wm module @var{m})}.
 @end deffn
 
 @menu
@@ -975,6 +1180,7 @@ them to initialize when Guile-WM connects to the X server.
 * Simple Focus::
 * Simple Reparenting::
 * Tiling::
+* Magnetic::
 * Time::
 * Tinywm::
 * Window Cycling::
@@ -1013,6 +1219,14 @@ screen.
 Resize the focused window to take up the whole screen of the monitor
 it's in.
 @end deffn
+
+@node Magnetic
+@section Magnetic
+
+This module combines the behavior of modules @code{tiling} and
+@code{tinywm}. @xref{Tiling}. @xref{Tinywm}. After a window is dragged
+into a new tile, it is automatically moved and resized to fill the
+whole tile.
 
 @node Generic Menu
 @section Generic Menu
@@ -1071,6 +1285,20 @@ An X11 font string that specifies the font used to display the menu
 @deffn{Command} message (msg #:string)
 Display @var{msg} in the upper right hand corner of the screen. It
 will disappear after eight seconds.
+@end deffn
+
+@deffn{Command} message-with-timeout (msg #:string) (timeout #:number)
+Display @var{msg} in the upper right hand corner of the screen for
+@var{timeout} seconds.
+@end deffn
+
+@deffn{Command} sticky-message msg #:string
+Display @var{msg} in the upper right hand corner of the screen until
+the message window is hidden or a new message is displayed
+@end deffn
+
+@deffn{Command} hide-message
+Hide the message window
 @end deffn
 
 @deffn{Scheme Variable} message-font
@@ -1183,6 +1411,14 @@ default.
 Set the root key to @var{key}.
 @end deffn
 
+@deffn{Command} bind-root-key! (key #:symbol) (str #:string)
+Bind @var{key} to command string @var{str} in the root keymap.
+@end deffn
+
+@deffn{Command} unbind-root-key! (key #:symbol)
+Remove the binding for @var{key} in the root keymap.
+@end deffn
+
 @deffn{Scheme Syntax} with-root-keymap-disabled stmt ...
 Evaluate @var{stmt} ... with the root keymap disabled. If the user
 presses the root key while the content of this form is being
@@ -1235,12 +1471,12 @@ whenever code in the expression results in a call to @var{solicit} or
 Module @code{simple-focus} adds some simple window decoration to give
 visual indication of which window has the input focus.
 
-@deffn{Procedure With Setter} simple-focus-color 
+@deffn{Procedure With Setter} simple-focus-color
 This variable stores the name of the color that is currently used for
 the border of the selected window. It must be a symbol.
 @end deffn
 
-@deffn{Procedure With Setter} simple-unfocus-color 
+@deffn{Procedure With Setter} simple-unfocus-color
 This variable stores the name of the color that is currently used for
 the border of unselected windows. It must be a symbol.
 @end deffn
@@ -1353,6 +1589,32 @@ Delete the tile that is split with the selected one and replace
 them both with one tile containing the selected tile's contents
 @end deffn
 
+@code{tiling} also exports a programming API for other modules to use:
+
+@deffn{Scheme Variable} blank-x-window
+Once the module is initialized, this variable stores the XID of the
+blank window that is displayed when an empty tile is selected.
+@end deffn
+
+@deffn{Scheme Variable} selected-tile
+Once the module is initialized, this variable stores the currently
+selected tile
+@end deffn
+
+@deffn{Scheme Procedure} tile-at x y
+Returns the tile at coordinates (@var{x}, @var{y}).
+@end deffn
+
+@deffn{Scheme Procedure} tile-for x-window
+Returns the tile that currently holds X window @var{x-window}, if the
+window is currently mapped, or @code{#f} if it is not. @var{x-window}
+should be a parent window created in the reparenting process, not the
+child window inside of it that belongs to another application.
+@end deffn
+
+@deffn{Scheme Procedure} move-tile old new
+Move the contents of tile @var{old} into tile @var{new}.
+@end deffn
 @node Time
 @section Time
 
@@ -1386,8 +1648,15 @@ Bring the bottom-most visible X window to the front and give it the
 input focus.
 @end deffn
 
-This module won't work very well with the tiling window manager, which
-has its own commands for managing hidden windows.
+@deffn{WM Hook} tinywm-drag-end-hook
+This hook is called when the user stops dragging a window. It
+provides one argument---the XID of the window being dragged.
+@end deffn
+
+@deffn{WM Hook} tinywm-resize-end-hook
+This hook is called when the user stops resizing a window. It
+provides one argument---the XID of the window being resized.
+@end deffn
 
 @node Window Menu
 @section Window Menu
