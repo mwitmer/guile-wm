@@ -55,13 +55,19 @@
   (window-property-value (get-window-property win wm-name-atom)))
 
 (define-public (top-level-windows)
-  (define query-tree (reply-for query-tree (current-root)))
-  (define wins (vector->list (xref query-tree 'children)))
+  (define query (reply-for query-tree (current-root)))
+  (define wins (vector->list (xref query 'children)))
   (define attribute-alist (map cons wins (window-attributes wins)))
   (define (is-top-level? attr-pair) 
     (and (eq? (xref (cdr attr-pair) 'map-state) 'viewable)
          (not (xref (cdr attr-pair) 'override-redirect))))
   (map car (filter is-top-level? attribute-alist)))
+
+(define-public (top-level-window? win)
+  (let lp ((wins (top-level-windows)))
+    (cond ((null? wins) #f)
+          ((xid= (car wins) win) #t)
+          (else (lp (cdr wins))))))
 
 (define-xcb-struct wm-size-hints
   (make-wm-size-hints
