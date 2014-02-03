@@ -41,6 +41,12 @@
 
 (define-public root-key (make-procedure-with-setter root-key-ref root-key-set!))
 
+(define-command (bind-root-key! (key #:symbol) (str #:string))
+  (bind-key-command! root-keymap key str))
+
+(define-command (unbind-root-key! (key #:symbol))
+  (unbind-key! root-keymap key))
+
 (define (run-keymap get)
   (define (default d) (message (format #f "Unknown key: ~a" d)))
   (define keymap (keymap-with-default root-keymap default))
