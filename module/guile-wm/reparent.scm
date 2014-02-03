@@ -66,25 +66,28 @@ the child window is unmapped."
          #:height (max (+ (xref configure 'height) child-border y) 0)
          #:width (max (+ (xref configure 'width) child-border x) 0))))))
 
+;; Call with: unmap-notify event, parent window
 (define-public unmap-notify-hook (make-wm-hook 2))
+;; Call with: child window, parent window
+(define-public after-reparent-hook (make-wm-hook 2))
 ;; Support for basic reparenting
 
 (define-public (on-map map-request)
   (define xcb-conn (current-xcb-connection))
   (define original-parent (xref map-request 'parent))
   (define child (xref map-request 'window))
-  (define parent
-   (if (not (hashv-ref reparents (xid->integer child)))
-       (let ((new-parent (basic-window-create 0 0 1 1 2 '())))
-         (grab new-parent)
-         (wm-reparent-window child new-parent 0 0)
-         (map-window child)
-         (map-window new-parent)
-         (set-focus child)
-         new-parent)
-       (hashv-ref reparents (xid->integer child))))
-  (set-window-state! child window-state-normal)
-  parent)
+  (if (not (hashv-ref reparents (xid->integer child)))
+      (let ((new-parent (basic-window-create 0 0 1 1 2 '())))
+        (grab new-parent)
+        (wm-reparent-window child new-parent 0 0)
+        (map-window child)
+        (cond
+         ((wm-hook-empty? after-reparent-hook)
+          (map-window child)
+          (map-window new-parent)
+          (set-window-state! child window-state-normal)
+          (set-focus child))
+         (else (run-wm-hook after-reparent-hook child new-parent))))))
 
 (define-public (on-configure configure-request)
   (define value-mask (xref configure-request 'value-mask))

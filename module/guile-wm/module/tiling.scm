@@ -377,23 +377,6 @@
 
 ;; Make this module the window manager
 
-(define (tiling-on-map map-request)
-  (and=> (tile-window selected-tile) hide-x-window!)
-  (let ((parent (on-map map-request)))
-    (move-x-window! parent selected-tile)
-    (select-tile selected-tile)
-    (add-wm-hook!
-     unmap-notify-hook
-     (lambda (event parent)
-       (discard-hidden-x-window! parent)
-       (when (and (tile-window selected-tile)
-                  (xid= (tile-window selected-tile) parent))
-         (set-tile-window! selected-tile #f)
-         (restore-window))))))
-
-(define (tiling-on-configure configure-request)
-  (on-configure configure-request))
-
 (define (tiling-click-to-focus button-press)
   (and-let* ((win (tile-at
                    (xref button-press 'root-x)
@@ -408,6 +391,20 @@
    (change-window-attributes blank-x-window #:back-pixmap 'parent-relative)
    (set! selected-tile (frame-content (car frame-list)))
    (listen! button-press-event 'click-to-focus tiling-click-to-focus)
+   (add-wm-hook!
+    after-reparent-hook
+    (lambda (child parent)
+      (and=> (tile-window selected-tile) hide-x-window!)
+      (move-x-window! parent selected-tile)
+      (select-tile selected-tile)
+      (add-wm-hook!
+       unmap-notify-hook
+       (lambda (event parent)
+         (discard-hidden-x-window! parent)
+         (when (and (tile-window selected-tile)
+                    (xid= (tile-window selected-tile) parent))
+           (set-tile-window! selected-tile #f)
+           (restore-window))))))
    ;; Start redirecting map/configure/circulate requests right away so
    ;; that we don't miss any of them
    (solicit
@@ -417,7 +414,7 @@
         (change-window-attributes (current-root)
           #:event-mask (cons 'button-press old-events))
         (solicit
-         (begin-redirect! tiling-on-map tiling-on-configure on-circulate)))))))
+         (begin-redirect! on-map on-configure on-circulate)))))))
 
 ;; This does the initial work of detecting the frames
 
