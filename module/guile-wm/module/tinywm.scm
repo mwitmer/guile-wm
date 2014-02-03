@@ -17,6 +17,7 @@
   #:use-module (guile-wm shared)
   #:use-module (guile-wm log)
   #:use-module (guile-wm focus)
+  #:use-module (guile-wm draw)
   #:use-module (guile-wm module randr)
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop)
@@ -75,10 +76,8 @@
   (win (xref button-press 'child))
 
   ;; Don't try to move/resize the root window.
-  (unless (= (xid->integer (win)) 0)
-    (when (assv-ref (reverse-reparents) (xid->integer (win)))
-      (set-focus (assv-ref (reverse-reparents) (xid->integer (win))))
-      (on-window-click (win) button-press))))
+  (unless (or (= (xid->integer (win)) 0) (fixed-window? (win)))
+    (on-window-click (win) button-press)))
 
 (wm-init
  (lambda ()

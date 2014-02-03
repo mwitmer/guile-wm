@@ -19,6 +19,7 @@
   #:use-module (xcb xml)
   #:use-module (guile-wm color)
   #:use-module (guile-wm focus)
+  #:use-module (guile-wm icccm)
   #:use-module (guile-wm shared)
   #:export (with-gc with-font with-pixmap basic-window-create
                     fixed-window-create))
@@ -64,6 +65,9 @@ consists of key-press, structure-notify, and exposure."
    #:bit-gravity 'north-west #:event-mask events #:override-redirect #t)
   window)
 
+(define (fixed-window-atom)
+  (xref (reply-for intern-atom #f "_GUILE_WM_FIXED") 'atom))
+
 (define* (fixed-window-create x y width height border
                               #:optional (events basic-events)
                               #:key (focused? #t))
@@ -85,4 +89,12 @@ the window will also keep the focus."
     ((visibility-notify-event visibility #:window window)
      (when (not (eq? (xref visibility 'state) 'unobscured))
        (configure-window (xref visibility 'window) #:stack-mode 'above))))
+  (let ((fixed-atom (fixed-window-atom)))
+   (change-property 'replace window fixed-atom
+                    (pre-defined-atom 'integer) 8 #(1 0 0 0)))
   window)
+
+(define-public (fixed-window? window)
+  (xid=
+   (xref (get-window-property window (fixed-window-atom)) 'type)
+   (pre-defined-atom 'integer)))
