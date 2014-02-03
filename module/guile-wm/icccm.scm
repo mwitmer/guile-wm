@@ -131,14 +131,19 @@
 (define-public (window-wm-hints win)
   (window-struct-property win wm-hints (pre-defined-atom 'wm-hints)))
 
-(define (wm-state-atom) (xref (reply-for intern-atom #f "WM_STATE") 'atom))
+(define wm-state-atom
+  (let ((a #f))
+    (lambda ()
+      (cond (a a)
+            (else (set! a (xref (reply-for intern-atom #f "WM_STATE") 'atom))
+                  a)))))
 
 (define-public (window-state win)
   (window-struct-property win wm-state (wm-state-atom)))
 
 (define-public (set-window-state! win state)
-  (define new-win-wm-state (make-wm-state state 0))
-  (format #t "Setting window state on ~a to ~a\n" win state)
+  (define new-win-wm-state (or (window-state win) (make-wm-state 0 0)))
+  (xset! new-win-wm-state 'state state)
   (let ((property-atom (wm-state-atom)))
    (change-property
     'replace win property-atom property-atom 8
