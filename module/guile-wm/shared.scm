@@ -100,14 +100,6 @@ modules."
      ((cdr kv)))
    (hash-map->list cons module-init-thunks)))
 
-(define-public commands (make-hash-table))
-(define-public (get-command key)
-  "Retrieve a window manager command with key KEY. Returns #f is
-none exists."
-  (hashq-ref commands key))
-
-(define-public reparents (make-hash-table))
-
 ;; This procedure is redefined so that we can rewind delimited
 ;; continuations through it
 
@@ -143,4 +135,3 @@ the cdr is the xid of the child."
      ((null? reparented) #f)
      ((xid= (car reparented) win) #t)
      (else (lp (cdr reparented))))))
-

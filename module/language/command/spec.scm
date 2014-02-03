@@ -4,6 +4,11 @@
   #:use-module (guile-wm shared)
   #:export (command))
 
+(define-public commands (make-hash-table))
+
+(define-public (get-command key)
+  (hashq-ref commands key))
+
 (define-public arg-missing (make-parameter #f))
 
 (define (string-convert arg type)
