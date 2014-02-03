@@ -18,6 +18,7 @@
   #:use-module (xcb xml xproto)
   #:use-module (xcb xml)
   #:use-module (guile-wm shared)
+  #:use-module (guile-wm reparent)
   #:use-module (guile-wm log))
 
 (define-public current-focus #f)

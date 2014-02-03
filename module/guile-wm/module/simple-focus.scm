@@ -18,6 +18,7 @@
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (guile-wm shared)
+  #:use-module (guile-wm icccm)
   #:use-module (guile-wm color)
   #:use-module (guile-wm focus)
   #:use-module (guile-wm reparent))
@@ -50,7 +51,8 @@
 
 (define (simple-focus-change old new)
   (define cmap (xref (current-screen) 'default-colormap))
-  (if (and old (reparented? old)) (unfocus-window! old))
+  (if (and old (or (reparented? old) (top-level-window? old)))
+      (unfocus-window! old))
   (if (and current-focus (is-window? current-focus))
       (unfocus-window! current-focus))
   (change-window-attributes (window-parent new)

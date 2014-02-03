@@ -386,6 +386,7 @@
 
 (wm-init
  (lambda ()
+   (define (make-parent) (basic-window-create 0 0 1 1 2))
    (set! frame-list (detect-frames))
    (set! blank-x-window (basic-window-create 0 0 200 20 2))
    (change-window-attributes blank-x-window #:back-pixmap 'parent-relative)
@@ -409,12 +410,9 @@
    ;; that we don't miss any of them
    (solicit
     (with-replies ((attributes get-window-attributes (current-root)))
-      (define old-events (xref attributes 'your-event-mask))
-      (when (not (memq 'button-press old-events))
-        (change-window-attributes (current-root)
-          #:event-mask (cons 'button-press old-events))
-        (solicit
-         (begin-redirect! on-map on-configure on-circulate)))))))
+      (change-window-attributes (current-root)
+        #:event-mask (cons 'button-press (xref attributes 'your-event-mask)))
+      (solicit (begin-reparent-redirect! make-parent 0 0 #f #f))))))
 
 ;; This does the initial work of detecting the frames
 

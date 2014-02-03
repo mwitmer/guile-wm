@@ -69,7 +69,6 @@
 (define-public current-screen (make-parameter #f))
 
 (define module-init-thunks (make-hash-table))
-(define-public obscured-windows (make-hash-table))
 
 (define-syntax wm-init
   (syntax-rules ()
@@ -106,32 +105,3 @@ modules."
 (define (with-input-from-string string thunk)
   (parameterize ((current-input-port (open-input-string string)))
     (thunk)))
-
-(define-public (reverse-reparents)
-  "Return a association list for all reparented windows. The car of
-each assoc is the integer value of the xid of the parent window, and
-the cdr is the xid of the child."
-  (hash-map->list
-   (lambda (k v) (cons (xid->integer v) (make-xid k xwindow)))
-   reparents))
-
-(define-public (reparented-windows)
-  "Return a list of all reparented windows."
-  (if reparents
-      (hash-map->list (lambda (k v) (make-xid k xwindow)) reparents)
-      #f))
-
-(define-public (window-child win)
-  (or (assv-ref (reverse-reparents)
-                (xid->integer win))
-      win))
-
-(define-public (window-parent win)
-  (or (hashv-ref reparents (xid->integer win)) win))
-
-(define-public (reparented? win)
-  (let lp ((reparented (reparented-windows)))
-    (cond
-     ((null? reparented) #f)
-     ((xid= (car reparented) win) #t)
-     (else (lp (cdr reparented))))))

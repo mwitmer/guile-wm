@@ -14,6 +14,7 @@
 ;;    along with Guile-WM.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (guile-wm module simple-reparent)
+  #:use-module (guile-wm draw)
   #:use-module (guile-wm focus)
   #:use-module (guile-wm shared)
   #:use-module (guile-wm redirect)
@@ -23,14 +24,13 @@
   #:use-module (xcb xml xproto))
 
 (define-public (click-to-focus button-press)
-  (and=>
-   (assv-ref (reverse-reparents) (xid->integer (xref button-press 'event)))
-   set-focus)
+  (if (xref button-press 'child)
+      (set-focus (window-child (xref button-press 'child)))
+      (set-focus (window-child (xref button-press 'event))))
   (allow-events 'replay-pointer (xref button-press 'time)))
 
 (wm-init
  (lambda () 
-   (set! reparents (make-hash-table))
-   (end-redirect!)
-   (begin-redirect! on-map on-configure on-circulate)
+   (define (make-parent) (basic-window-create 0 0 1 1 2))
+   (begin-reparent-redirect! make-parent 0 0 #t #f)
    (listen! button-press-event 'click-to-focus click-to-focus)))
