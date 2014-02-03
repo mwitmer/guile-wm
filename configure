@@ -586,6 +586,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+guilesitedir
 GUILE_SITE
 GUILE_TOOLS
 GUILE_CONFIG
@@ -663,6 +664,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_silent_rules
+with_guile_site_dir
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1286,6 +1288,12 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-silent-rules   less verbose build output (undo: "make V=1")
   --disable-silent-rules  verbose build output (undo: "make V=0")
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-guile-site-dir   use the specified installation path for Guile
+                          modules
 
 Some influential environment variables:
   PKG_CONFIG  path to pkg-config utility
@@ -2802,6 +2810,21 @@ $as_echo "$ac_guile_module_required" >&6; }
               as_fn_error $? "required guile module not found: (xcb xml xproto)" "$LINENO" 5
           fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if (xcb xml struct) is available" >&5
+$as_echo_n "checking if (xcb xml struct) is available... " >&6; }
+
+  $GUILE -c "(use-modules (xcb xml struct)) (exit ((lambda () 0)))" > /dev/null 2>&1
+  ac_guile_module_required=$?
+
+	  if test "$ac_guile_module_required" = "0" ; then ac_guile_module_required=yes ; else ac_guile_module_required=no ; fi
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_guile_module_required" >&5
+$as_echo "$ac_guile_module_required" >&6; }
+
+
+          if test "$ac_guile_module_required" = "no" ; then
+              as_fn_error $? "required guile module not found: (xcb xml struct)" "$LINENO" 5
+          fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if (xcb xml ext randr) is available" >&5
 $as_echo_n "checking if (xcb xml ext randr) is available... " >&6; }
 
@@ -2832,6 +2855,20 @@ $as_echo "$ac_guile_module_required" >&6; }
               as_fn_error $? "required guile module not found: (xcb event-loop)" "$LINENO" 5
           fi
 
+
+
+# Check whether --with-guile-site-dir was given.
+if test "${with_guile_site_dir+set}" = set; then :
+  withval=$with_guile_site_dir; guilesitedir="$withval"
+else
+  guilesitedir="$GUILE_SITE"
+
+fi
+
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $guilesitedir" >&5
+$as_echo "$guilesitedir" >&6; }
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure

@@ -18,7 +18,19 @@ GUILE_PROGS
 
 GUILE_MODULE_REQUIRED([xcb xml])
 GUILE_MODULE_REQUIRED([xcb xml xproto])
+GUILE_MODULE_REQUIRED([xcb xml struct])
 GUILE_MODULE_REQUIRED([xcb xml ext randr])
 GUILE_MODULE_REQUIRED([xcb event-loop])
+
+AC_ARG_WITH([guile-site-dir],
+        [AS_HELP_STRING([--with-guile-site-dir],
+            [use the specified installation path for Guile modules]
+        )],
+        [guilesitedir="$withval"],
+        [guilesitedir="$GUILE_SITE"]
+)
+
+AC_SUBST([guilesitedir])
+AC_MSG_RESULT($guilesitedir)
 
 AC_OUTPUT

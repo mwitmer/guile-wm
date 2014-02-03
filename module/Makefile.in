@@ -193,6 +193,7 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
+guilesitedir = @guilesitedir@
 host_alias = @host_alias@
 htmldir = @htmldir@
 includedir = @includedir@
@@ -217,7 +218,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-wmdir = $(GUILE_SITE)
+wmdir = $(guilesitedir)
 nobase_dist_wm_DATA = \
 guile-wm/color.scm                        \
 guile-wm/focus.scm                        \
@@ -235,9 +236,11 @@ guile-wm/keymap.scm                       \
 guile-wm/log.scm                          \
 guile-wm/redirect.scm                     \
 guile-wm/module/cursor.scm                \
+guile-wm/module/magnetic.scm              \
 guile-wm/module/message.scm               \
 guile-wm/module/repl.scm                  \
 guile-wm/module/simple-reparent.scm       \
+guile-wm/module/tiling.scm                \
 guile-wm/module/window-cycle.scm          \
 guile-wm/module/fullscreen.scm            \
 guile-wm/module/minibuffer.scm            \

@@ -19,7 +19,7 @@
 ##   not, write to the Free Software Foundation, Inc., 51 Franklin
 ##   Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-wmdir = $(GUILE_SITE)
+wmdir = $(guilesitedir)
 nobase_dist_wm_DATA =                     \
 guile-wm/color.scm                        \
 guile-wm/focus.scm                        \
@@ -37,9 +37,11 @@ guile-wm/keymap.scm                       \
 guile-wm/log.scm                          \
 guile-wm/redirect.scm                     \
 guile-wm/module/cursor.scm                \
+guile-wm/module/magnetic.scm              \
 guile-wm/module/message.scm               \
 guile-wm/module/repl.scm                  \
 guile-wm/module/simple-reparent.scm       \
+guile-wm/module/tiling.scm                \
 guile-wm/module/window-cycle.scm          \
 guile-wm/module/fullscreen.scm            \
 guile-wm/module/minibuffer.scm            \
