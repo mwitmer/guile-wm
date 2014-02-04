@@ -18,7 +18,7 @@
 (define (format-args args)
   (if (list? args)
       (apply string-append (map format-arg args))
-      (format-arg args)))
+      (format #f "~a ..." (format-arg args))))
 
 (define (command-description c)
   (define summary (command-summary c))
