@@ -119,7 +119,7 @@
     continue-minibuffer confirm-minibuffer cancel-minibuffer
     (empty-text-edit-data))))
 
-(define (get-additional-arg arg-name type)
+(define-public (prompt-for-additional-arg arg-name type)
   (minibuffer (format #f "~a [~a]: " arg-name (keyword->symbol type))))
 
 (define-command (prompt-for-eval)
@@ -130,7 +130,7 @@ result."
 (define-command (prompt-for-command)
   "Prompt for a Guile-WM command and run it."
   (define cmd (minibuffer "command: "))
-  (if (not (unspecified? cmd)) (run-command cmd get-additional-arg)))
+  (if (not (unspecified? cmd)) (run-command cmd prompt-for-additional-arg)))
 
 (define-command (prompt-for-shell-command)
   "Prompt for a shell command and run it."
