@@ -27,25 +27,36 @@
   #:use-module (language scheme spec)
   #:use-module (system base compile)
   #:replace (quit)
-  #:export (define-command shell-command bind-key-commands run-command))
+  #:export (define-command shell-command bind-key-commands run-command
+             bind-key-command!))
 
-(define-public (bind-key-command! keymap key str)
-  (bind-key! keymap key (lambda () (run-command str))))
+(define-once documentation (make-hash-table))
+
+(define* (bind-key-command! keymap key str #:optional arg-missing)
+  (bind-key! keymap key
+             (lambda () (if arg-missing
+                            (run-command str arg-missing)
+                            (run-command str)))))
 
 (define-syntax bind-key-commands
   (syntax-rules ()
     ((_ keymap (key command) ...)
      (begin
-       (bind-key-command! keymap (quasiquote key) command) ...))))
+       (bind-key-command! keymap (quasiquote key) command) ...))
+    ((_ keymap arg-missing (key command) ...)
+     (begin
+       (bind-key-command! keymap (quasiquote key) command arg-missing) ...))))
 
 (define-syntax define-command
-  (syntax-rules () 
+  (syntax-rules ()
     ((_ (name (arg type) ...) stmt ...)
      (begin
        (define! 'name
          (let ((proc (lambda (arg ...) stmt ...)))
            (hashq-set! commands (quote name) `(,(cons 'arg type) ...))
            proc))
+       (hashq-set!
+        documentation (quote name) (procedure-documentation name))
        (export name)))
     ((_ (name arg type) stmt ...)
      (begin
@@ -53,6 +64,8 @@
          (let ((proc (lambda arg stmt ...)))
            (hashq-set! commands (quote name) (cons 'arg type))
            proc))
+       (hashq-set!
+        documentation (quote name) (procedure-documentation name))
        (export name)))))
 
 (define (arg-missing-default type)
@@ -75,7 +88,7 @@
     (lambda args
       (backtrace))))
 
-(define-command (quit) 
+(define-command (quit)
   "Quit the window manager and close the connection to the X
 server. Replaces the core binding of the same name."
   (when (and (current-xcb-connection) (xcb-connected? (current-xcb-connection)))
@@ -97,7 +110,7 @@ containing its output."
     str))
 
 (define-command (wm-eval (exp #:string))
-"Evaluate S-expression @var{exp} in the window manager's current
+"Evaluate S-expression EXP in the window manager's current
 environment."
   (catch #t
     (lambda ()
@@ -108,6 +121,9 @@ environment."
                     #:to 'value
                     #:env (current-module)))))
     (lambda args
-      (log! (format #f "Error in evaluated expression: ~a ~a" arg args)))
+      (log! (format #f "Error in evaluated expression: ~a ~a" exp args)))
     (lambda args
       (backtrace))))
+
+(define-public (command-documentation command)
+  (hashq-ref documentation command))
