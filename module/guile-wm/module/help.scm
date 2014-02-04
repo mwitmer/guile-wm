@@ -41,6 +41,6 @@ by the user"
           (if doc (sticky-message doc) (message "Not documented")))))
 
 (define-command (document (cmd #:symbol))
-  "Display docstring for command CMD"
+  "Display arguments, their types, and the docstring for command CMD"
   (sticky-message (command-description cmd)))
 

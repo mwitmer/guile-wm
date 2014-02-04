@@ -637,7 +637,20 @@ or string which will be coerced to the correct type.
 Some syntax is also provided to bind keys to commands. @xref{Keymaps}.
 
 @deffn{Scheme Syntax} bind-key-commands keymap (key command) ...
+@deffnx{Scheme Syntax} bind-key-commands keymap arg-missing (key command) ...
 Bind @var{key} to command string @var{command} in @var{keymap}.
+
+In the second form, @var{arg-missing} is a procedure to call to supply
+arguments that are missing from the command string, as with
+@code{run-command}.
+@end deffn
+
+The docstring for a commands procedure can be accessed using the
+procedure @code{command-documentation}:
+
+@deffn{Scheme Procedure} command-documentation command
+Return the docstring for the procedure associated with symbol
+@var{command}.
 @end deffn
 
 Some basic commands are provided by default:
@@ -1170,6 +1183,7 @@ symbol instead of a list, it is expanded into @code{(guile-wm module
 * Cursor::
 * Fullscreen::
 * Generic Menu::
+* Help::
 * Message::
 * Minibuffer::
 * Randr::
@@ -1268,6 +1282,21 @@ will be passed to @var{action} if the keymap is canceled.
 An X11 font string that specifies the font used to display the menu
 @end deffn
 
+@node Help
+@section Help
+
+@code{help} provides commands that allow the user to browse the
+documentation.
+
+@deffn{Command} help
+List all the commands and show documentation for the one selected by
+the user
+@end deffn
+
+@deffn{Command} document
+Display arguments, their types, and the docstring for command CMD
+@end deffn
+
 @node Message
 @section Message
 
@@ -1320,6 +1349,15 @@ is canceled, the return value is unspecified.
 
 @deffn{Scheme Variable} minibuffer-font
 An X11 font string that specifies the font used to display the minibuffer
+@end deffn
+
+The minibuffer can be used to prompt for missing command
+arguments. @xref{Commands}.
+
+@deffn{Scheme Procedure} prompt-for-additional-arg arg-name type
+Prompt for a command argument with name @var{arg-name} and type
+@var{type}, and return it. This procedure can be passed as the
+argument @var{arg-missing-proc} in a call to @code{run-command}.
 @end deffn
 
 @code{minibuffer} also exports some commands that use the minibuffer:
