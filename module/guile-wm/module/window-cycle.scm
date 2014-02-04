@@ -46,8 +46,13 @@
                    set-focus)
             (set-focus (car windows))))))
 
-(define-command (window-cycle) (basic-window-cycle (lambda (win) #t)))
+(define-command (window-cycle)
+  "Bring the bottom-most X window to the front and give it the input
+focus."
+  (basic-window-cycle (lambda (win) #t)))
 
 (define-command (visible-window-cycle)
+  "Bring the bottom-most visible X window to the front and give it the
+input focus. Requires window reparenting to work properly."
   (basic-window-cycle
    (lambda (win) (not (window-obscured? win)))))

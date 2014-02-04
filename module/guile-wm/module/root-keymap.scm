@@ -42,9 +42,11 @@
 (define-public root-key (make-procedure-with-setter root-key-ref root-key-set!))
 
 (define-command (bind-root-key! (key #:symbol) (str #:string))
+  "Bind KEY to command string STR in the root keymap."
   (bind-key-command! root-keymap key str))
 
 (define-command (unbind-root-key! (key #:symbol))
+  "Remove the binding for KEY in the root keymap."
   (unbind-key! root-keymap key))
 
 (define (run-keymap get)
@@ -77,7 +79,9 @@ keymap while minibuffers, menus, and so on are active."
     (get-later process-root-key))
   (get-later process-root-key))
 
-(define-command (set-root-key! (key #:symbol)) (set! (root-key) key))
+(define-command (set-root-key! (key #:symbol))
+  "Set the root key to KEY."
+  (set! (root-key) key))
 
 (define-public keymap-cursor
   (make-procedure-with-setter

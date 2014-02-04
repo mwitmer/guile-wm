@@ -110,4 +110,6 @@
   cursor)
 
 (define-command (set-cursor! (cursor #:symbol))
+"Set the cursor to the X11 cursor glyph associated with the symbol
+CURSOR in `x-cursors'."
   (change-window-attributes (current-root) #:cursor (make-cursor cursor)))

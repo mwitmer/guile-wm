@@ -37,18 +37,25 @@
   (if hide-message-thread (cancel-thread hide-message-thread)))
 
 (define-command (message msg #:string)
+  "Display MSG in the upper right hand corner of the screen. It will
+disappear after eight seconds."
   (message-with-timeout (string-join msg) message-default-timeout))
 
 (define-command (message-with-timeout (msg #:string) (timeout #:number))
+  "Display MSG in the upper right hand corner of the screen for
+TIMEOUT seconds."
   (show-message msg)
   (set!
    hide-message-thread
    (make-thread (lambda () (sleep timeout) (hide-message)))))
 
 (define-command (sticky-message msg #:string)
+  "Display MSG in the upper right hand corner of the screen until the
+message window is hidden or a new message is displayed"
   (show-message (string-join msg)))
 
 (define-command (hide-message)
+  "Hide the message window"
   (unmap-window message-window)
   (if hide-message-thread (cancel-thread hide-message-thread))
   (set! hide-message-thread #f))

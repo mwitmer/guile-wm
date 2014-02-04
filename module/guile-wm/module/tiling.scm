@@ -519,52 +519,76 @@
 ;; about their X windows, not the tile abstraction used internally
 
 (define-command (horizontal-split)
+  "Split the selected tile in half horizontally. The left new tile
+will be selected and store the contents of the original tile."
   (split-tile-horizontal! selected-tile))
 
 (define-command (vertical-split)
+  "Split the selected tile in half vertically. The top new tile will
+be selected and store the contents of the original tile."
   (split-tile-vertical! selected-tile))
 
 (define-command (select-down)
+  "Select the tile below the currently selected tile, if one exists"
   (and=> (tile-below selected-tile) select-tile))
 
 (define-command (select-up)
+  "Select the tile above the currently selected tile, if one exists"
   (and=> (tile-above selected-tile) select-tile))
 
 (define-command (select-left)
+  "Select the tile to the left of the currently selected tile, if one
+exists"
   (and=> (tile-to-left selected-tile) select-tile))
 
 (define-command (select-right)
+  "Select the tile to the right of the currently selected tile, if one
+exists"
   (and=> (tile-to-right selected-tile) select-tile))
 
 (define-command (move-right)
+  "Move the contents of the selected tile to the tile to the right, if
+one exists, and select it"
   (and-let* ((new-tile (tile-to-right selected-tile)))
     (move-tile selected-tile new-tile)))
 
 (define-command (move-left)
+  "Move the contents of the selected tile to the tile to the left, if
+one exists, and select it"
   (and-let* ((new-tile (tile-to-left selected-tile)))
     (move-tile selected-tile new-tile)))
 
 (define-command (move-up)
+  "Move the contents of the selected tile to the tile above, if one
+exists, and select it"
   (and-let* ((new-tile (tile-above selected-tile)))
     (move-tile selected-tile new-tile)))
 
 (define-command (move-down)
+  "Move the contents of the selected tile to the tile below, if one
+exists, and select it"
   (and-let* ((new-tile (tile-below selected-tile)))
     (move-tile selected-tile new-tile)))
 
 (define-command (grow-window-vertical)
+  "Increase the the height of the selected tile"
   (resize-tile-in-context! selected-tile 'vertical +))
 
 (define-command (grow-window-horizontal)
+  "Increase the the width of the selected tile"
   (resize-tile-in-context! selected-tile 'horizontal +))
 
 (define-command (shrink-window-vertical)
+  "Decrease the the height of the selected tile"
   (resize-tile-in-context! selected-tile 'vertical -))
 
 (define-command (shrink-window-horizontal)
+  "Decrease the the width of the selected tile"
   (resize-tile-in-context! selected-tile 'horizontal -))
 
 (define-command (clear-frame)
+  "Delete all the tiles in the current frame and replace them with one
+tile holding the window that was in the selected tile"
   (let* ((current-frame (frame-of selected-tile))
          (new-tile (make-tile
                     (frame-height current-frame)
@@ -579,10 +603,12 @@
     (select-tile new-tile)))
 
 (define-command (reveal-window)
+  "Place the next hidden window in the queue into the current tile"
   (pop-and-unhide-x-window! selected-tile)
   (select-tile selected-tile))
 
 (define-command (restore-window)
+  "Place the most recently hidden window into the current tile"
   (define most-recent (most-recent-x-window))
   (cond
    (most-recent
@@ -596,6 +622,8 @@
     (select-tile selected-tile))))
 
 (define-command (delete-split)
+  "Delete the tile that is split with the selected one and replace
+them both with one tile containing the selected tile's contents"
   (define container (tile-container selected-tile))
   (if (frame? container) #f
       (let ((new-tile

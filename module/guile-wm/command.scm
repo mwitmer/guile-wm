@@ -76,20 +76,29 @@
       (backtrace))))
 
 (define-command (quit) 
+  "Quit the window manager and close the connection to the X
+server. Replaces the core binding of the same name."
   (when (and (current-xcb-connection) (xcb-connected? (current-xcb-connection)))
     (log! (format #f "Quitting Guile-WM"))
     (xcb-disconnect! (current-xcb-connection))))
 
 (define-command (shell-command commands #:string)
+  "Concatenate COMMANDS into a single string and execute the result in
+a detached process."
   (close-port (open-pipe (string-join commands) OPEN_READ)))
 
 (define-command (shell-command-output cmd #:string)
+  "Concatenate COMMANDS into a single string and execute the result
+in a process; wait for the command to terminate and return a string
+containing its output."
   (let* ((port (open-input-pipe (string-join cmd)))
          (str (read-delimited "" port)))
     (close-pipe port)
     str))
 
 (define-command (wm-eval (exp #:string))
+"Evaluate S-expression @var{exp} in the window manager's current
+environment."
   (catch #t
     (lambda ()
       (with-input-from-string exp

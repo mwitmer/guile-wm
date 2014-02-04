@@ -123,13 +123,17 @@
   (minibuffer (format #f "~a [~a]: " arg-name (keyword->symbol type))))
 
 (define-command (prompt-for-eval)
+  "Prompt for a Guile scheme expression, evaluate it, and display the
+result."
   (minibuffer "eval: " (lambda (cmd) (message (format #f "~a" (wm-eval cmd))))))
 
 (define-command (prompt-for-command)
+  "Prompt for a Guile-WM command and run it."
   (define cmd (minibuffer "command: "))
   (if (not (unspecified? cmd)) (run-command cmd get-additional-arg)))
 
 (define-command (prompt-for-shell-command)
+  "Prompt for a shell command and run it."
   (minibuffer "/usr/bin/sh -c: " shell-command))
 
 (define-once minibuffer-window #f)

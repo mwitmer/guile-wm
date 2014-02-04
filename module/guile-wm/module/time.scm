@@ -35,6 +35,7 @@
     (11 . Dec)))
 
 (define-command (show-time)
+  "Display a message with the current date and time"
   (define tm (localtime (current-time)))
   (message (format #f "~2,,,'0@a:~2,,,'0@a:~2,,,'0@a ~a ~a ~a" 
                    (tm:hour tm)

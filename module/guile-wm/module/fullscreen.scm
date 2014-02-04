@@ -47,6 +47,8 @@
               (find-dimens (cdr possible)))))))
 
 (define-command (fullscreen)
+"Resize the focused window to take up the whole screen (or output, if
+randr is enabled)."
   (define (fullscreen-it win)
     (with-replies ((geom get-geometry win))
       (define border (* 2 (xref geom 'border-width)))

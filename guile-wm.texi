@@ -1322,6 +1322,21 @@ is canceled, the return value is unspecified.
 An X11 font string that specifies the font used to display the minibuffer
 @end deffn
 
+@code{minibuffer} also exports some commands that use the minibuffer:
+
+@deffn{Command} prompt-for-eval
+Prompt for a Guile scheme expression, evaluate it, and display the
+result.
+@end deffn
+
+@deffn{Command} prompt-for-command
+Prompt for a Guile-WM command and run it.
+@end deffn
+
+@deffn{Command} prompt-for-shell-command
+Prompt for a shell command and run it.
+@end deffn
+
 @node Randr
 @section Randr
 
@@ -1359,7 +1374,7 @@ Set the resolution of randr output @var{output} to (@var{width}, @var{height}).
 @end deffn
 
 @deffn{Command} set-offset! (output #:string) (x #:number) (y #:number)
-Set the resolution of randr output @var{output} to (@var{x}, @var{y}).
+Set the offset of randr output @var{output} to (@var{x}, @var{y}).
 @end deffn
 
 @deffn{Command} disable-screen! (output #:string)
@@ -1369,7 +1384,7 @@ Disable randr output @var{output}.
 @deffn{Command} rotate-screen! (output #:string) (rotation #:symbol)
 
 Set the rotation of randr output @var{output} to @var{rotation}, which
-can be any one of the following:
+can be any one of the following symbols:
 
 @code{rotate-0}, @code{reflect-x}, @code{reflect-y}, @code{rotate-90},
 @code{rotate-270}, or @code{rotate-180}.
@@ -1630,7 +1645,7 @@ Bring the bottom-most X window to the front and give it the input focus.
 
 @deffn{Command} visible-window-cycle
 Bring the bottom-most visible X window to the front and give it the
-input focus.
+input focus. Requires window reparenting to work properly.
 @end deffn
 
 @node Window Menu

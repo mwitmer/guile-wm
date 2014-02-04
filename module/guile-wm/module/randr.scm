@@ -64,15 +64,23 @@
 (define-command (set-resolution! (output #:string) 
                                  (width #:number)
                                  (height #:number))
+  "Set the resolution of randr output OUTPUT to (WIDTH, HEIGHT)."
   (resolution output width height))
 
 (define-command (set-offset! (output #:string) (x #:number) (y #:number))
+  "Set the offset of randr output OUTPUT to (X, Y)."
   (offset output x y))
 
 (define-command (disable-screen! (output #:string))
+  "Disable randr output OUTPUT."
   (disable output))
 
 (define-command (rotate-screen! (output #:string) (rotation #:symbol))
+  "Set the rotation of randr output OUTPUT to ROTATION, which
+can be any one of the following symbols:
+
+`rotate-0, `reflect-x', `reflect-y', `rotate-90',
+`rotate-270', or `rotate-180'."
   (rotate output rotation))
 
 (define (mode-pair mode-info) (cons (xref mode-info 'id) mode-info))
