@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([guile-wm], [0.2], [mark@markwitmer.com])
+AC_INIT([guile-wm], [1.0], [mark@markwitmer.com])
 
 AC_CONFIG_AUX_DIR([build_aux])
 AM_INIT_AUTOMAKE([gnu std-options])
