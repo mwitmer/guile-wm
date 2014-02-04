@@ -56,16 +56,15 @@ Table of Contents
 
   • keymaps/minibuffer/user-defined commands: The usual emacs-style
     stuff.
-  • tinywm-inspired window management: Though I do some reparenting and
-    highlight the focused window.
+  • A tiling window manager inspired by Stumpwm, as well as a drag/drop
+    window manager inspired by tinywm
   • Built-in repl: make changes to the WM while it's running, talk to
     the X server directly (if you're into that kind of thing), integrate
     with Geiser in Emacs, etc. (Note: if you call a procedure that talks
     to the X server, use the metacommand ,post to evalute the
     expression.  That way it'll run inside the event loop on the other
     thread).
-  • "icccm" support: Ha ha, not really, but I have a few bits and pieces
-    implemented
+  • Some icccm support
   • And more! It's completely open, so you could implement whatever
     window-management paradigm you like.
 
@@ -80,7 +79,6 @@ Table of Contents
 4.1 Wish List
 ─────────────
 
-  • A more sophisticated tiling window manager algorithm
   • Some kind of window decoration
   • Built-in replacements for those little X utility programs (xmodmap,
     xsetbg, etc.) I did part of xrandr as a proof-of-concept.
