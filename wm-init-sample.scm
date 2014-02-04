@@ -61,22 +61,21 @@
 (start-wm-repl)
 
 ;; Root keymap
-(bind-key-commands 
- root-keymap
- (semicolon "prompt-for-command")
- (colon "prompt-for-eval")
- (bang "prompt-for-shell-command")
- (C-q "quit")
- (f "conkeror")
- (F "fullscreen")
- (e "emacs")
- (w "select-window")
- (T "show-time")
- (n "window-cycle")
- (tab "visible-window-cycle")
- (c "shell-command xterm -e telnet localhost 37146")
- (t "shell-command xterm"))
+(bind-key-commands root-keymap prompt-for-additional-arg
+  (semicolon "prompt-for-command")
+  (colon "prompt-for-eval")
+  (bang "prompt-for-shell-command")
+  (C-q "quit")
+  (f "conkeror")
+  (F "fullscreen")
+  (e "emacs")
+  (w "select-window")
+  (T "show-time")
+  (n "window-cycle")
+  (tab "visible-window-cycle")
+  (c "shell-command xterm -e telnet localhost 37146")
+  (t "shell-command xterm"))
 
 ;; Startup programs
 (shell-command "emacs --daemon")
-(shell-command (format #f "xterm -e 'tail ~a -f'" logfile))
+(shell-command (format #f "xterm -e 'tail /tmp/guile-wm.log -f'"))
