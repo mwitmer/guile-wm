@@ -106,9 +106,7 @@
       (split-element2 split)
       (split-element1 split)))
 
-(define (tile-empty? tile)
-  (or (not (tile-window tile))
-      (xid= (tile-window tile) blank-x-window)))
+(define (tile-empty? tile) (not (tile-window tile)))
 
 (define (width-of el)
   (cond
@@ -216,11 +214,9 @@
   (set-tile-container! tile1 new-split)
   (set-tile-container! tile2 new-split)
   (set-split-container! new-split (tile-container tile))
-  (if (tile-window tile)
-      (move-x-window! (tile-window tile) tile1))
-  (when (eq? tile selected-tile)
-    (select-tile tile1)
-    (pop-and-unhide-x-window! tile2)))
+  (place-window! (tile-window tile) tile1)
+  (if (eq? tile selected-tile) (select-tile tile1))
+  (pop-and-unhide-x-window! tile2))
 
 (define (split-tile-horizontal! tile)
   (let* ((tile1 (make-tile (tile-height tile)
@@ -244,20 +240,14 @@
   (cond
    ((eq? old new) (fit-x-window! (tile-window new) new))
    (else
-    (let ((has-backup? (q-empty? hidden-x-windows)))
-      (and=> (tile-window new) hide-x-window!)
-      (move-x-window! (tile-window old) new)
-      (if has-backup?
-          (set-tile-window! old #f)
-          (let ((hidden-window (deq! hidden-x-windows)))
-            (move-x-window! hidden-window old)))
-      (select-tile new)))))
+    (place-window! (tile-window old) new #t)
+    (set-tile-window! old #f)
+    (pop-and-unhide-x-window! old))))
 
 (define (for-each-tile proc el)
   (let lp ((content el))
     (cond
-     ((frame? content)
-      (lp (frame-content content)))
+     ((frame? content) (lp (frame-content content)))
      ((split? content)
       (lp (split-element1 content))
       (lp (split-element2 content)))
@@ -265,14 +255,12 @@
 
 ;; Putting x windows into tiles
 
-(define (move-x-window! x-window tile)
+(define* (place-window! x-window tile #:optional select?)
+  (if x-window (discard-hidden-x-window! x-window))
+  (hide-tile-window! tile)
   (set-tile-window! tile x-window)
-  (if (and (eq? selected-tile tile) (not (xid= x-window blank-x-window)))
-      (unmap-window blank-x-window))
-  (fit-x-window! x-window tile)
-  (discard-hidden-x-window! x-window)
-  (if (not (xid= blank-x-window x-window))
-   (set-window-state! (window-child x-window) window-state-normal)))
+  (if x-window (fit-x-window! x-window tile))
+  (if select? (select-tile tile)))
 
 (define (fit-x-window! x-window tile)
   (define geom (reply-for get-geometry x-window))
@@ -352,23 +340,19 @@
 ;; Managing hidden x windows
 
 (define (most-recent-x-window)
-  (if (cdr hidden-x-windows)
-      (last (car hidden-x-windows))
-      #f))
+  (if (q-empty? hidden-x-windows) #f (last (car hidden-x-windows))))
 
-(define (hide-x-window! x-window)
-  (when (not (xid= x-window blank-x-window))
+(define (hide-tile-window! tile)
+  (and-let* ((x-window (tile-window tile)))
     (set-window-state! (window-child x-window) window-state-iconic)
-    (when (not (memq x-window (car hidden-x-windows)))
-      (enq! hidden-x-windows x-window)))
-  (unmap-window x-window))
+    (if (not (memq x-window (car hidden-x-windows)))
+        (enq! hidden-x-windows x-window))
+    (set-tile-window! tile #f)
+    (unmap-window x-window)))
 
 (define (pop-and-unhide-x-window! tile)
   (when (not (q-empty? hidden-x-windows))
-    (if (not (tile-empty? tile))
-        (hide-x-window! (tile-window tile)))
-    (let ((hidden-window (deq! hidden-x-windows)))
-      (move-x-window! hidden-window tile))))
+    (place-window! (deq! hidden-x-windows) tile)))
 
 (define (discard-hidden-x-window! x-window)
   (define new-q-list
@@ -384,10 +368,10 @@
             (cons new-q-list (last-pair new-q-list)))))
 
 (define (select-tile tile)
-  (if (not (tile-empty? tile))
-      (unmap-window blank-x-window)
-      (move-x-window! blank-x-window tile))
-  (set-focus (window-child (tile-window tile)))
+  (if (tile-empty? tile)
+      (fit-x-window! blank-x-window tile)
+      (unmap-window blank-x-window))
+  (set-focus (window-child (or (tile-window tile) blank-x-window)))
   (set! selected-tile tile))
 
 ;; Make this module the window manager
@@ -407,20 +391,21 @@
    (change-window-attributes blank-x-window #:back-pixmap 'parent-relative)
    (set! selected-tile (frame-content (car frame-list)))
    (listen! button-press-event 'click-to-focus tiling-click-to-focus)
+   (add-wm-hook! screen-change-hook reset-frames)
+   (add-wm-hook! menu-select-window-hook tiling-menu-select-window)
    (add-wm-hook!
     after-reparent-hook
     (lambda (child parent)
-      (and=> (tile-window selected-tile) hide-x-window!)
-      (move-x-window! parent selected-tile)
-      (select-tile selected-tile)
+      (place-window! parent selected-tile #t)
       (add-wm-hook!
        unmap-notify-hook
        (lambda (event parent)
          (discard-hidden-x-window! parent)
-         (when (and (tile-window selected-tile)
-                    (xid= (tile-window selected-tile) parent))
-           (set-tile-window! selected-tile #f)
-           (restore-window))))))
+         (and-let* ((tile (tile-for parent)))
+           (set-tile-window! tile #f)
+           (and-let* ((recent (most-recent-x-window)))
+             (place-window! recent tile))
+           (if (eq? tile selected-tile) (select-tile tile)))))))
    ;; Start redirecting map/configure/circulate requests right away so
    ;; that we don't miss any of them
    (solicit
@@ -457,9 +442,6 @@
          (set-tile-container! win frame)
          frame))))
 
-(if (module-defined? (current-module) 'reset-frames)
-    (remove-wm-hook! screen-change-hook reset-frames))
-
 ;; This gets called after the display configuration changes. The
 ;; contents of an old frame will get moved to the first new frame that
 ;; meets the following criteria:
@@ -471,12 +453,11 @@
 ;; If no such frame is found, the frame's windows just get stuck in
 ;; the hidden window queue.
 (define (reset-frames)
-  (define (hide! win) (and=> (tile-window win) hide-x-window!))
   (define (find-matching-frame old-frame unused-new-frames)
     (let lp ((unused unused-new-frames))
       (cond
        ((null? unused)
-        (for-each-tile hide! old-frame)
+        (for-each-tile hide-tile-window! old-frame)
         unused-new-frames)
        ((frames-match? old-frame (car unused))
         (let ((new-frame (car unused))
@@ -496,24 +477,10 @@
     (fold find-matching-frame new-frames frame-list)
     (set! frame-list new-frames)))
 
-(add-wm-hook! screen-change-hook reset-frames)
-
-(if (module-defined? (current-module) 'tiling-menu-select-window)
-    (remove-wm-hook! screen-change-hook tiling-menu-select-window))
-
 (define (tiling-menu-select-window x-window)
   (define parent (window-parent x-window))
-  (define (restore-hidden-window)
-    (discard-hidden-x-window! parent)
-    (if (not (tile-empty? selected-tile))
-        (hide-x-window! (tile-window selected-tile)))
-    (move-x-window! parent selected-tile)
-    (select-tile selected-tile))
-  (or
-   (and=> (tile-for parent) select-tile)
-   (restore-hidden-window)))
-
-(add-wm-hook! menu-select-window-hook tiling-menu-select-window)
+  (or (and=> (tile-for parent) select-tile)
+      (place-window! parent selected-tile #t)))
 
 ;; Command API. It uses "window" instead of tile because people care
 ;; about their X windows, not the tile abstraction used internally
@@ -589,18 +556,15 @@ exists, and select it"
 (define-command (clear-frame)
   "Delete all the tiles in the current frame and replace them with one
 tile holding the window that was in the selected tile"
-  (let* ((current-frame (frame-of selected-tile))
+  (let* ((selected-window (tile-window selected-tile))
+         (current-frame (frame-of selected-tile))
          (new-tile (make-tile
                     (frame-height current-frame)
                     (frame-width current-frame))))
-    (for-each-tile
-     (lambda (tile) (and=> (tile-window tile) hide-x-window!)) current-frame)
+    (for-each-tile hide-tile-window! current-frame)
     (set-frame-content! current-frame new-tile)
     (set-tile-container! new-tile current-frame)
-    (if (tile-window selected-tile)
-        (move-x-window! (tile-window selected-tile) new-tile))
-    (unmap-window blank-x-window)
-    (select-tile new-tile)))
+    (place-window! selected-window new-tile #t)))
 
 (define-command (reveal-window)
   "Place the next hidden window in the queue into the current tile"
@@ -609,36 +573,23 @@ tile holding the window that was in the selected tile"
 
 (define-command (restore-window)
   "Place the most recently hidden window into the current tile"
-  (define most-recent (most-recent-x-window))
-  (cond
-   (most-recent
-    (discard-hidden-x-window! most-recent)
-    (if (not (tile-empty? selected-tile))
-        (hide-x-window! (tile-window selected-tile)))
-    (move-x-window! most-recent selected-tile)
-    (select-tile selected-tile))
-   ((not (tile-window selected-tile))
-    (move-x-window! blank-x-window selected-tile)
-    (select-tile selected-tile))))
+  (and-let* ((recent (most-recent-x-window)))
+    (place-window! recent selected-tile #t)))
 
 (define-command (delete-split)
   "Delete the tile that is split with the selected one and replace
 them both with one tile containing the selected tile's contents"
   (define container (tile-container selected-tile))
   (if (frame? container) #f
-      (let ((new-tile
+      (let ((selected-window (tile-window selected-tile))
+            (new-tile
              (make-tile (split-height container) (split-width container)))
             (super (container-of container)))
-        (for-each-tile
-         (lambda (tile) (and=> (tile-window tile) hide-x-window!)) container)
-        (cond
-         ((split? super)
-          (if (eq? (split-element1 super) container)
-              (set-split-element1! super new-tile)
-              (set-split-element2! super new-tile)))
-         (else (set-frame-content! super new-tile)))
+        (for-each-tile hide-tile-window! container)
+        (cond ((split? super)
+               (if (eq? (split-element1 super) container)
+                   (set-split-element1! super new-tile)
+                   (set-split-element2! super new-tile)))
+              (else (set-frame-content! super new-tile)))
         (set-tile-container! new-tile super)
-        (if (tile-window selected-tile)
-            (move-x-window! (tile-window selected-tile) new-tile)
-            (move-x-window! blank-x-window new-tile))
-        (select-tile new-tile))))
+        (place-window! selected-window new-tile #t))))
