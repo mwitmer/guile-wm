@@ -31,10 +31,13 @@
  (system base compile))
 
 (define (report-error resume data)
-  (format (current-error-port) "X Error: ~a \n~{~a~}"
-          (xcb-struct-name (xcb-struct data))
-          (map (lambda (f) (format #f "~a: ~a\n" f (xref (xcb-data data) f)))
-               (xcb-struct-fields (xcb-struct data))))
+  (if data
+      (format (current-error-port) "X Error: ~a \n~{~a~}"
+              (xcb-struct-name (xcb-struct data))
+              (map (lambda (f) (format #f "~a: ~a\n"
+                                       f (xref (xcb-data data) f)))
+                   (xcb-struct-fields (xcb-struct data))))
+      (format (current-error-port) "X Error: Unknown xcb-struct received"))
   (resume))
 
 (define wm-modules-spec (make-regexp "^;+\\s+wm-modules:\\s+(.+)"))
