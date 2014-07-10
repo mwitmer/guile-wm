@@ -14,10 +14,13 @@
 ;;    along with Guile-WM.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (guile-wm module tinywm)
+  #:use-module (ice-9 receive)
   #:use-module (guile-wm shared)
+  #:use-module (guile-wm command)
   #:use-module (guile-wm log)
   #:use-module (guile-wm focus)
   #:use-module (guile-wm draw)
+  #:use-module (guile-wm reparent)
   #:use-module (guile-wm module randr)
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop)
@@ -27,6 +30,7 @@
 (define win (make-parameter #f))
 (define screen-height (make-parameter #f))
 (define screen-width (make-parameter #f))
+(define stop-proc #f)
 
 (define-public tinywm-drag-end-hook (make-wm-hook 1))
 (define-public tinywm-resize-end-hook (make-wm-hook 1))
@@ -35,10 +39,10 @@
   (with-replies ((point query-pointer (current-root)) (geom get-geometry (win)))
     (define (box p g s) (if (> (+ p g) s) (- s g) p))
     (if (eq? (action) 'move)
-        (configure-window (win)
+        (configure-window (window-parent (win))
           #:x (box (xref point 'root-x) (xref geom 'width) (screen-width))
           #:y (box (xref point 'root-y) (xref geom 'height) (screen-height)))
-        (configure-window (win)
+        (configure-window (window-parent (win))
           #:width (max 1 (- (xref point 'root-x) (xref geom 'x)))
           #:height (max 1 (- (xref point 'root-y) (xref geom 'y)))))))
 
@@ -56,7 +60,8 @@
                 (xref (current-screen) 'height-in-pixels))))
     (screen-width (car dimens))
     (screen-height (cdr dimens))
-    (configure-window window #:stack-mode 'above)
+    (configure-window (window-parent window) #:stack-mode 'above)
+    (set-focus window)
     (with-replies ((geom get-geometry window))
       (cond
        ((= (xref button-press 'detail) 1)
@@ -79,14 +84,23 @@
   (unless (or (= (xid->integer (win)) 0) (fixed-window? (win)))
     (on-window-click (win) button-press)))
 
-(wm-init
- (lambda ()
-   (create-listener ()
-     ((motion-notify-event #:event (current-root))  => on-motion-notify)
-     ((button-release-event #:event (current-root)) => on-button-release)
-     ((button-press-event #:event (current-root))   => on-button-press))
+(define-command (start-tinywm!)
+  (receive (stop! reset!)
+      (create-listener ()
+        ((motion-notify-event #:event (current-root))  => on-motion-notify)
+        ((button-release-event #:event (current-root)) => on-button-release)
+        ((button-press-event #:event (current-root))   => on-button-press))
+    (set! stop-proc stop!))
 
-   (grab-button #f (current-root) '(button-press button-release) 'async 'async
-                (current-root) (xcb-none xcursor) '#{1}# '(#{1}#))
-   (grab-button #f (current-root) '(button-press button-release) 'async 'async
-                (current-root) (xcb-none xcursor) '#{3}# '(#{1}#))))
+  (grab-button #f (current-root) '(button-press button-release) 'async 'async
+               (current-root) (xcb-none xcursor) '#{1}# '(#{1}#))
+  (grab-button #f (current-root) '(button-press button-release) 'async 'async
+               (current-root) (xcb-none xcursor) '#{3}# '(#{1}#)))
+
+(define-command (stop-tinywm!)
+  (if stop-proc (stop-proc))
+  (set! stop-proc #f)
+  (ungrab-button '#{1}# (current-root) '(#{1}#))
+  (ungrab-button '#{3}# (current-root) '(#{1}#)))
+
+(wm-init start-tinywm!)

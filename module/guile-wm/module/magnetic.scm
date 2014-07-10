@@ -15,23 +15,31 @@
 
 (define-module (guile-wm module magnetic)
   #:use-module (guile-wm shared)
+  #:use-module (srfi srfi-2)
   #:use-module (xcb xml)
   #:use-module (xcb xml xproto)
   #:use-module (xcb event-loop))
 
 (use-wm-modules tinywm tiling)
 
-(wm-init
- (lambda ()
-   (add-wm-hook!
-    tinywm-drag-end-hook
-    (lambda (win)
-      (with-replies ((geom get-geometry win))
-        (let ((new-tile (tile-at (xref geom 'x) (xref geom 'y))))
-          (if (not (xid= blank-x-window win))
-              (move-tile selected-tile new-tile))))))
-   (add-wm-hook!
-    tinywm-resize-end-hook
-    (lambda (win)
-      (let ((tile (tile-for win)))
-        (move-tile tile tile))))))
+(define (fit-to-bounds wind)
+  (and-let* ((tile (tile-for win)))
+    (move-tile tile tile)))
+
+(define (snap-to-tile win)
+  (with-replies ((geom get-geometry win))
+    (and-let* ((new-tile (tile-at (xref geom 'x) (xref geom 'y)))
+               ((tile-for win)))
+      (if (not (xid= blank-x-window win))
+          (move-tile selected-tile new-tile)))))
+
+(define (start-magnetic!)
+  (add-wm-hook! tinywm-drag-end-hook snap-to-tile)
+  (add-wm-hook! tinywm-resize-end-hook fit-to-bounds))
+
+(define (stop-magnetic!)
+  (remove-wm-hook! tinywm-drag-end-hook snap-to-tile)
+  (remove-wm-hook! tinywm-resize-end-hook fit-to-bounds))
+
+(add-wm-hook! stop-tiling-hook stop-magnetic!)
+(add-wm-hook! start-tiling-hook start-magnetic!)

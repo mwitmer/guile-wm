@@ -33,11 +33,12 @@
   #:use-module (xcb xml)
   #:use-module ((xcb xml xproto)
                 #:select (unmap-window map-window get-geometry configure-window
+                                       destroy-window
                                        destroy-notify-event allow-events
                                        change-window-attributes
                                        button-press-event unmap-notify-event
                                        get-window-attributes))
-  #:export (blank-x-window selected-tile))
+  #:export (blank-x-window selected-tile start-tiling-hook stop-tiling-hook))
 
 ;;; Commentary:
 ;; This is a tiling window manager for guile-wm. It provides support
@@ -90,6 +91,9 @@
 (define-once selected-tile #f)
 ;; This is the master list of frames
 (define-once frame-list #f)
+
+(define-once stop-tiling-hook (make-wm-hook))
+(define-once start-tiling-hook (make-wm-hook))
 
 ;; Helper procedures for managing tiles and splits
 
@@ -262,6 +266,17 @@
   (if x-window (fit-x-window! x-window tile))
   (if select? (select-tile tile)))
 
+(define (place-windows!)
+  (if (reparented-windows)
+   (map
+    (lambda (win)
+      (define parent (window-parent win))
+      (with-replies ((geom get-geometry parent))
+        (define x (xref geom 'x))
+        (define y (xref geom 'y))
+        (place-window! parent (tile-at x y) #t)))
+    (reparented-windows))))
+
 (define (fit-x-window! x-window tile)
   (define geom (reply-for get-geometry x-window))
   (define hints (window-size-hints x-window))
@@ -383,36 +398,64 @@
     (select-tile win))
   (allow-events 'replay-pointer (xref button-press 'time)))
 
+(define (non-tiling-click-to-focus button-press)
+  (define win (xref button-press 'event))
+  (configure-window (window-parent win) #:stack-mode 'above)
+  (set-focus win)
+  (allow-events 'replay-pointer (xref button-press 'time)))
+
+(define (tiling-unmap event parent)
+  (discard-hidden-x-window! parent)
+  (and-let* ((tile (tile-for parent)))
+    (set-tile-window! tile #f)
+    (and-let* ((recent (most-recent-x-window)))
+      (place-window! recent tile))
+    (if (eq? tile selected-tile) (select-tile tile))))
+
+(define (tiling-reparent child parent) (place-window! parent selected-tile #t))
+
+(define (make-parent) (basic-window-create 0 0 1 1 2))
+
+(define-command (start-tiling!)
+  (set! frame-list (detect-frames))
+  (set! blank-x-window (basic-window-create 0 0 200 20 2))
+  (change-window-attributes blank-x-window #:back-pixmap 'parent-relative)
+  (place-windows!)
+  (set! selected-tile (frame-content (car frame-list)))
+  (add-wm-hook! screen-change-hook reset-frames)
+  (add-wm-hook! menu-select-window-hook tiling-menu-select-window)
+  (add-wm-hook! unmap-notify-hook tiling-unmap)
+  (add-wm-hook! after-reparent-hook tiling-reparent)
+  (run-wm-hook start-tiling-hook)
+  (with-replies ((attributes get-window-attributes (current-root)))
+    (change-window-attributes (current-root)
+      #:event-mask (cons 'button-press (xref attributes 'your-event-mask)))
+    (change-window-attributes (current-root)
+      #:event-mask (cons 'button-press (xref attributes 'your-event-mask)))
+    (unlisten! button-press-event 'click-to-focus)
+    (listen! button-press-event 'click-to-focus tiling-click-to-focus)))
+
+(define-command (stop-tiling!)
+  (remove-wm-hook! after-reparent-hook tiling-reparent)
+  (remove-wm-hook! unmap-notify-hook tiling-unmap)
+  (remove-wm-hook! menu-select-window-hook tiling-menu-select-window)
+  (set! selected-tile #f)
+  (destroy-window blank-x-window)
+  (set! blank-x-window #f)
+  (set! frame-list #f)
+  (with-replies ((attributes get-window-attributes (current-root)))
+    (change-window-attributes (current-root)
+      #:event-mask (delq 'button-press (xref attributes 'your-event-mask)))
+    (change-window-attributes (current-root)
+      #:event-mask (delq 'button-press (xref attributes 'your-event-mask)))
+    (unlisten! button-press-event 'click-to-focus)
+    (listen! button-press-event 'click-to-focus non-tiling-click-to-focus))
+  (run-wm-hook stop-tiling-hook))
+
 (wm-init
  (lambda ()
-   (define (make-parent) (basic-window-create 0 0 1 1 2))
-   (set! frame-list (detect-frames))
-   (set! blank-x-window (basic-window-create 0 0 200 20 2))
-   (change-window-attributes blank-x-window #:back-pixmap 'parent-relative)
-   (set! selected-tile (frame-content (car frame-list)))
-   (listen! button-press-event 'click-to-focus tiling-click-to-focus)
-   (add-wm-hook! screen-change-hook reset-frames)
-   (add-wm-hook! menu-select-window-hook tiling-menu-select-window)
-   (add-wm-hook!
-    after-reparent-hook
-    (lambda (child parent)
-      (place-window! parent selected-tile #t)
-      (add-wm-hook!
-       unmap-notify-hook
-       (lambda (event parent)
-         (discard-hidden-x-window! parent)
-         (and-let* ((tile (tile-for parent)))
-           (set-tile-window! tile #f)
-           (and-let* ((recent (most-recent-x-window)))
-             (place-window! recent tile))
-           (if (eq? tile selected-tile) (select-tile tile)))))))
-   ;; Start redirecting map/configure/circulate requests right away so
-   ;; that we don't miss any of them
-   (solicit
-    (with-replies ((attributes get-window-attributes (current-root)))
-      (change-window-attributes (current-root)
-        #:event-mask (cons 'button-press (xref attributes 'your-event-mask)))
-      (solicit (begin-reparent-redirect! make-parent 0 0 #f #f))))))
+   (start-tiling!)
+   (begin-reparent-redirect! make-parent 0 0 #f #f)))
 
 ;; This does the initial work of detecting the frames
 
