@@ -31,13 +31,14 @@
  (system base compile))
 
 (define (report-error resume data)
-  (if data
+  (catch #t
+    (lambda ()
       (format (current-error-port) "X Error: ~a \n~{~a~}"
               (xcb-struct-name (xcb-struct data))
               (map (lambda (f) (format #f "~a: ~a\n"
                                        f (xref (xcb-data data) f)))
-                   (xcb-struct-fields (xcb-struct data))))
-      (format (current-error-port) "X Error: Unknown xcb-struct received"))
+                   (xcb-struct-fields (xcb-struct data)))))
+    (lambda args (log! "Unknown error: ~a" data)))
   (resume))
 
 (define wm-modules-spec (make-regexp "^;+\\s+wm-modules:\\s+(.+)"))
@@ -63,21 +64,31 @@
   (define module-list (with-input-from-file init-file read-modules))
   (cons 'use-wm-modules module-list))
 
+(define (make-xcb-connection)
+  (let lp ((attempts 0))
+    (or (xcb-connect!)
+        (if (= attempts 4)
+            (error "Could not establish XCB connection")
+            (begin (usleep 500000)
+                   (lp (+ attempts 1)))))))
+
 (define (begin-event-loop init-file log-file)
-  (define xcb-conn (xcb-connect!))
-  (event-loop-prepare! xcb-conn report-error)
-  (loop-with-connection xcb-conn
-    (open-log log-file)
-    (current-screen (xref (xcb-connection-setup xcb-conn) 'roots 0))
-    (current-root (xref (current-screen) 'root))
-    (let ((user-module (resolve-module '(guile-wm user))))
-      (set-current-module user-module)
-      (when init-file
-          (compile (get-user-modules init-file) #:env user-module)
-          (compile `(begin
-                      (init-guile-wm-modules!)
-                      (include ,init-file))
-                   #:env user-module))))
+  (open-log log-file)
+  (log! "Beginning event loop")
+  (let ((xcb-conn (make-xcb-connection)))
+       (log! "XCB is connected")
+       (event-loop-prepare! xcb-conn report-error)
+       (loop-with-connection xcb-conn
+         (current-screen (xref (xcb-connection-setup xcb-conn) 'roots 0))
+         (current-root (xref (current-screen) 'root))
+         (let ((user-module (resolve-module '(guile-wm user))))
+           (set-current-module user-module)
+           (when init-file
+             (compile (get-user-modules init-file) #:env user-module)
+             (compile `(begin
+                         (init-guile-wm-modules!)
+                         (include ,init-file))
+                      #:env user-module)))))
   (close-log))
 
 (define (main . args)
